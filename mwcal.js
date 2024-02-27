@@ -88,7 +88,7 @@ const moonPhases = ['Full Moon', 'Waning Gibbous', 'Last Quarter', 'Waning Cresc
 const monthNames = [
 	['Hammer', 'Alturiak', 'Ches', 'Tarsakh', 'Mirtul', 'Kythorn', 'Flamerule', 'Eleasis', 'Eleint', 'Marpenoth', 'Uktar', 'Nightal'],
 	['Zarantyr', 'Olarune', 'Therendor', 'Eyre', 'Dravago', 'Nymm', 'Lharvion', 'Barrakas', 'Rhaan', 'Sypheros', 'Aryth', 'Vult'],
-	['Fireseek', 'Readying', 'Coldeven', 'Planting', 'Flocktime', 'Wealsun', 'Reaping', 'Goodmonth', 'Harvester', 'Patchwall', "Ready'reat", 'Sunsebb'],
+	['Needfest', 'Fireseek', 'Readying', 'Coldeven', 'Growfest', 'Planting', 'Flocktime', 'Wealsun', 'Richfest', 'Reaping', 'Goodmonth', 'Harvester', 'Brewfest', 'Patchwall', 'Ready\'reat', 'Sunsebb'],
 	['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
 	['Horisal', 'Misuthar', 'Dualahei', 'Thunsheer', 'Unndilar', 'Brussendar', 'Sydenstar', 'Fessuran', "Quen'pillar", 'Cuersaar', 'Duscar'],
 ];
@@ -97,19 +97,176 @@ class MultiWorldCalendar {
 	constructor() {
 		this.style = styles;
 		this.world = 0;
-		this.default = [state.mwcal.faerun, state.mwcal.eberron, state.mwcal.greyhawk, state.mwcal.modern, state.mwcal.talDorei];
 		this.moons = moonPhases;
 		this.months = monthNames;
-		this.alarms = state.alarms;
-		this.worlds = ['faerun', 'eberron', 'greyhawk', 'modern', 'talDorei'];
+		this.alarms = [state.alarms.faerun, state.alarms.eberron, state.alarms.greyhawk, state.alarms.modern, state.alarms.talDorei];
+		this.worlds = ['faerun', 'eberron', 'greyhawk', 'modern', 'tal\'dorei'];
+	}
+
+	handleInput(msg) {
+		const args = msg.content.split(/\s+--/);
+
+		if (msg.type !== 'api') return;
+
+		if (playerIsGM(msg.playerid)) {
+			switch (args[0]) {
+				case '!mwcal':
+					switch (args[1]) {
+						default:
+							chkAlarms();
+							calendarMenu();
+						break;
+						case 'setday':
+							const day = parseInt(args[2]);
+
+							if (isNaN(day)) return sendChat('Multi-World Calendar', 'Please input a valid number for the day.');
+
+							setDay(day);
+							chkAlarms();
+							calendarMenu();
+						break;
+						case 'setmonth':
+							const month = args[2];
+
+							if (!monthNames[mwcal.world].includes(month)) return sendChat('Multi-World Calendar', 'Please input a valid month.');
+
+							setMonth(month);
+							chkAlarms();
+							calendarMenu();
+						break;
+						case 'setyear':
+							const year = parseInt(args[2]);
+
+							if (isNaN(year)) return sendChat('Multi-World Calendar', 'Please input a valid number for the year.');
+
+							setYear(year);
+							chkAlarms();
+							calendarMenu();
+						break;
+						case 'settime':
+							const hour = parseInt(args[3]);
+							const minute = parseInt(args[5]);
+
+							if (isNaN(hour) || isNaN(minute)) return sendChat('Multi-World Calendar', 'Please input a valid number for the time.');
+
+							setHour(hour);
+							setMinute(minute);
+							chkAlarms();
+							calendarMenu();
+						break;
+						case 'advance':
+							const amount = parseInt(args[2]);
+							const type = args[3];
+
+							if (isNaN(amount)) return sendChat('Multi-World Calendar', 'Please input a valid number for the amount.');
+							if (!['Short Rest', 'Long Rest', 'Hour', 'Minute', 'Day', 'Week', 'Month', 'Year'].includes(type)) return sendChat('Multi-World Calendar', 'Please input a valid type.');
+
+							advance(amount, type);
+							chkAlarms();
+							calendarMenu();
+						break;
+						case 'weather':
+							if (args[2] === 'toggle') {
+								toggleWeather()
+								calendarMenu();
+							} else {
+								randomizeWeather();
+								calendarMenu();
+							}
+						break;
+						case 'moon':
+							if (args[2] === 'toggle') {
+								toggleMoon();
+								calendarMenu();
+							} else {
+								const phase = args[2];
+								const phase2 = args[4];
+
+								updMoon(phase, phase2);
+								calendarMenu();
+							}
+						break;
+						case 'show':
+							showCalendar();
+						break;
+						case 'reset':
+							setMWCalDefaults();
+							calendarMenu();
+						break;
+					}
+				break;
+				case '!month':
+					setMonthName(args[1], args[2]);
+				break;
+				case '!alarm':
+					switch (args[1]) {
+						case undefined:
+							alarmMenu();
+						break;
+						default:
+							const num = parseInt(args[1]);
+
+							if (isNaN(num)) return sendChat('Multi-World Calendar', 'Please input a valid number for the alarm.');
+
+							switch (args[2]) {
+								case 'settitle':
+									setTitle(num, args[3]);
+								break;
+								case 'setdate':
+									setDate(num, args[3]);
+								break;
+								case 'settime':
+									setTime(num, args[3]);
+								break;
+								case 'setmessage':
+									setMessage(num, args[3]);
+								break;
+							}
+
+							alarmMenu(num);
+						break;
+						case 'new':
+							createAlarm(args[2], args[4], args[6], args[8]);
+						break;
+						case 'delete':
+							deleteAlarm(args[2]);
+							alarmMenu();
+						break;
+						case 'reset':
+							setAlarmDefaults();
+							alarmMenu();
+						break;
+					}
+				break;
+			}
+		} else {
+			if (args[0] === '!mwcal') {
+				showCalendar();
+			}
+		}
+	}
+
+	checkInstall() {
+		if (!state.mwcal) {
+			setMWCalDefaults();
+		}
+
+		if (!state.alarms) {
+			setAlarmDefaults();
+		}
+	}
+
+	registerEventHandlers() {
+		on('chat:message', this.handleInput);
+		log('Multi-World Calendar - Registered Event Handlers!');
 	}
 }
 
 const mwcal = new MultiWorldCalendar();
 
 function setMWCalDefaults() {
-	state.mwcal = {
-		faerun: {
+	state.mwcal = [
+		{
 			name: 'Faerun',
 			ord: 1,
 			year: 1486,
@@ -122,7 +279,7 @@ function setMWCalDefaults() {
 			mtype: true,
 			wtype: true,
 		},
-		eberron: {
+		{
 			name: 'Eberron',
 			ord: 1,
 			year: 998,
@@ -135,7 +292,7 @@ function setMWCalDefaults() {
 			mtype: true,
 			wtype: true,
 		},
-		greyhawk: {
+		{
 			name: 'Greyhawk',
 			ord: 1,
 			year: 591,
@@ -148,7 +305,7 @@ function setMWCalDefaults() {
 			mtype: true,
 			wtype: true,
 		},
-		modern: {
+		{
 			name: 'Modern',
 			ord: 1,
 			year: 2020,
@@ -161,8 +318,8 @@ function setMWCalDefaults() {
 			mtype: true,
 			wtype: true,
 		},
-		talDorei: {
-			name: "Tal'Dorei",
+		{
+			name: 'Tal\'Dorei',
 			ord: 1,
 			year: 812,
 			day: 1,
@@ -174,13 +331,19 @@ function setMWCalDefaults() {
 			mtype: true,
 			wtype: true,
 		},
-	};
+	];
 
 	log('Multi-World Calendar: Successfully registered Calendar defaults!');
 }
 
 function setAlarmDefaults() {
-	state.alarms = [];
+	state.alarms = {
+		faerun: [],
+		eberron: [],
+		greyhawk: [],
+		modern: [],
+		talDorei: []
+	};
 
 	log('Multi-World Calendar: Successfully registered Alarm defaults!');
 }
@@ -188,21 +351,22 @@ function setAlarmDefaults() {
 function updOrdinal() {
 	switch (mwcal.world) {
 		case 0:
-			state.mwcal[world].ord = 30 * (state.mwcal[world].month - 1) + state.mwcal[world].day;
+			state.mwcal[mwcal.world].ord = 30 * (state.mwcal[mwcal.world].month - 1) + state.mwcal[world].day;
 			break;
 		case 1:
-			state.mwcal[world].ord = 28 * (state.mwcal[world].month - 1) + state.mwcal[world].day;
+			state.mwcal[mwcal.world].ord = 28 * (state.mwcal[mwcal.world].month - 1) + state.mwcal[world].day;
 			break;
 		case 2:
-			state.mwcal[world].ord = 28 * (state.mwcal[world].month - 1) + state.mwcal[world].day;
+			const grhwkDays = [7, 28, 28, 28, 7, 28, 28, 28, 7, 28, 28, 28, 7, 28, 28, 28];
+			state.mwcal[mwcal.world].ord = grhwkDays.slice(0, state.mwcal[mwcal.world].month - 1).reduce((a, b) => a + b, 0) + state.mwcal[world].day;
 			break;
 		case 3:
 			const modernDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-			state.mwcal[world].ord = modernDays.slice(0, state.mwcal[world].month - 1).reduce((a, b) => a + b, 0) + state.mwcal[world].day;
+			state.mwcal[mwcal.world].ord = modernDays.slice(0, state.mwcal[mwcal.world].month - 1).reduce((a, b) => a + b, 0) + state.mwcal[world].day;
 			break;
 		case 4:
 			const talDays = [29, 30, 30, 31, 28, 31, 32, 29, 27, 29, 32];
-			state.mwcal[world].ord = talDays.slice(0, state.mwcal[world].month - 1).reduce((a, b) => a + b, 0) + state.mwcal[world].day;
+			state.mwcal[mwcal.world].ord = talDays.slice(0, state.mwcal[mwcal.world].month - 1).reduce((a, b) => a + b, 0) + state.mwcal[world].day;
 			break;
 	}
 }
@@ -217,14 +381,10 @@ function getSuffix() {
 	if (ordinal >= 11 && ordinal <= 13) return 'th';
 
 	switch (ordinal % 10) {
-		case 1:
-			return 'st';
-		case 2:
-			return 'nd';
-		case 3:
-			return 'rd';
-		default:
-			return 'th';
+		case 1: return 'st';
+		case 2: return 'nd';
+		case 3: return 'rd';
+		default: return 'th';
 	}
 }
 
@@ -243,7 +403,7 @@ function updDate() {
 				month = monthNames[0][Math.ceil(ordinal / 30) - 1];
 				date = ordinal - (Math.ceil(ordinal / 30) - 1) * 30;
 			}
-			break;
+		break;
 		case 1:
 			if (Math.ceil(ordinal / 28) <= 1) {
 				month = monthNames[1][0];
@@ -252,28 +412,30 @@ function updDate() {
 				month = monthNames[1][Math.ceil(ordinal / 28) - 1];
 				date = ordinal - (Math.ceil(ordinal / 28) - 1) * 28;
 			}
-			break;
+		break;
 		case 2:
-			if (Math.ceil(ordinal / 28) <= 1) {
+			const grhwkDays = [7, 28, 28, 28, 7, 28, 28, 28, 7, 28, 28, 28, 7, 28, 28, 28];
+			const grhwkDay = grhwkDays[state.mwcal[world].month - 1];
+			if (Math.ceil(ordinal / grhwkDay) <= 1) {
 				month = monthNames[2][0];
 				date = ordinal;
 			} else {
-				month = monthNames[2][Math.ceil(ordinal / 28) - 1];
-				date = ordinal - (Math.ceil(ordinal / 28) - 1) * 28;
+				month = monthNames[2][Math.ceil(ordinal / grhwkDay) - 1];
+				date = ordinal - (Math.ceil(ordinal / grhwkDay) - 1) * grhwkDay;
 			}
-			break;
+		break;
 		case 3:
 			const modernDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 			const modDay = modernDays[state.mwcal[world].month - 1];
 
-			if (Math.ceil(ordinal / modernDays[state.mwcal[world].month - 1]) <= 1) {
+			if (Math.ceil(ordinal / modDay) <= 1) {
 				month = monthNames[3][0];
 				date = ordinal;
 			} else {
 				month = monthNames[3][Math.ceil(ordinal / modDay) - 1];
 				date = ordinal - (Math.ceil(ordinal / modDay) - 1) * modDay;
 			}
-			break;
+		break;
 		case 4:
 			const talDays = [29, 30, 30, 31, 28, 31, 32, 29, 27, 29, 32];
 			const talDay = talDays[state.mwcal[world].month - 1];
@@ -285,7 +447,7 @@ function updDate() {
 				month = monthNames[4][Math.ceil(ordinal / talDay) - 1];
 				date = ordinal - (Math.ceil(ordinal / talDay) - 1) * talDay;
 			}
-			break;
+		break;
 	}
 
 	setMonth(month);
@@ -304,6 +466,11 @@ function getMonth() {
 function setMonth(month) {
 	const months = monthNames[mwcal.world];
 	state.mwcal[mwcal.world].month = months.indexOf(month) + 1;
+}
+
+function setMonthName(month, name) {
+	monthNames[mwcal.world].indexOf(month) = name;
+	state.months = monthNames;
 }
 
 function setYear(year) {
@@ -341,27 +508,27 @@ function updMoon(phase, phase2) {
 				switch (remainder) {
 					default:
 						moonArray = getMoonArray(1);
-						break;
+					break;
 					case 0.25:
 						moonArray = getMoonArray(2);
-						break;
+					break;
 					case 0.5:
 						moonArray = getMoonArray(3);
-						break;
+					break;
 					case 0.75:
 						moonArray = getMoonArray(4);
-						break;
+					break;
 				}
 
 				const moonNum = moonArray.split(',');
 				getMoon(moonNum[ordinal % 8]);
-				break;
+			break;
 			case 1:
 				moonArray = getMoonArray();
 				const lunaNum = moonArray[0].split(',');
 				const celeneNum = moonArray[1].split(',');
 				getMoon(lunaNum[ordinal % 8], celeneNum[ordinal % 8]);
-				break;
+			break;
 		}
 	} else {
 		if (phase2) {
@@ -381,19 +548,19 @@ function getMoonArray(num) {
 				case 1:
 					moonArray =
 						'0,1,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,14,15,15,16,16,16,1,2,2,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,16,16,1,2,2,3,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,16,16,1,2,2,3,3,4,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,14,15,15,16,16,16,1,2,2,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,16,16,1,2,2,3,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,16,16,1,2,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,15,15,15,16,16,1';
-					break;
+				break;
 				case 2:
 					moonArray =
 						'0,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,16,16,1,2,2,3,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,14,15,15,16,16,16,1,2,2,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,16,16,1,2,2,3,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,14,15,15,16,16,16,0,1,2,2,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,16,16,1,2,2,3,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,14,15,15,16,16,16,1,2,2,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,16,16,1,2,2,3,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,14,15,15,16,16,16,1,2,2,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,15,15,15,16,16,1';
-					break;
+				break;
 				case 3:
 					moonArray =
 						'0,2,2,3,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,16,16,1,2,2,3,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,16,16,1,2,2,3,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,14,15,15,16,16,16,1,2,2,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,16,16,1,2,2,3,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,14,15,15,16,16,16,0,1,2,2,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,14,15,15,16,16,16,1,2,2,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,16,16,1,2,2,3,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,14,15,15,16,16,16,1,2,2,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,16,16,1';
-					break;
+				break;
 				case 4:
 					moonArray =
 						'0,2,2,3,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,14,15,15,16,16,16,1,2,2,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,16,16,1,2,2,3,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,14,15,15,16,16,16,1,2,2,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,16,16,1,2,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,15,16,16,0,1,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,15,16,16,1,2,2,3,3,4,4,5,6,6,7,7,7,8,8,9,10,10,11,11,12,12,13,14,14,14,15,15,16,16,16,1,2,2,3,3,4,4,5,6,6,7,7,8,8,9,10,10,11,11,11,12,12,13,14,14,15,15,15,16,16';
-					break;
+				break;
 			}
 			break;
 		case 1:
@@ -401,7 +568,7 @@ function getMoonArray(num) {
 				'0,7,8,8,9,10,10,11,12,12,13,13,14,14,15,15,16,16,1,2,2,3,4,4,5,5,6,6,7,7,8,8,9,10,10,11,12,12,13,13,14,14,15,15,16,16,1,2,2,3,4,4,5,5,6,6,7,7,8,8,9,10,10,11,12,12,13,13,14,14,15,15,16,16,1,2,2,3,4,4,5,5,6,6,7,7,8,8,9,10,10,11,12,12,13,13,14,14,15,15,16,16,1,2,2,3,4,4,5,5,6,6,7,7,8,8,9,10,10,11,12,12,13,13,14,14,15,15,16,16,1,2,2,3,4,4,5,5,6,6,7,7,8,8,9,10,10,11,12,12,13,13,14,14,15,15,16,16,1,2,2,3,4,4,5,5,6,6,7,7,8,8,9,10,10,11,12,12,13,13,14,14,15,15,16,16,1,2,2,3,4,4,5,5,6,6,7,7,8,8,9,10,10,11,12,12,13,13,14,14,15,15,16,16,1,2,2,3,4,4,5,5,6,6,7,7,8,8,9,10,10,11,12,12,13,13,14,14,15,15,16,16,1,2,2,3,4,4,5,5,6,6,7,7,8,8,9,10,10,11,12,12,13,13,14,14,15,15,16,16,1,2,2,3,4,4,5,5,6,6,7,7,8,8,9,10,10,11,12,12,13,13,14,14,15,15,16,16,1,2,2,3,4,4,5,5,6,6,7,7,8,8,9,10,10,11,12,12,13,13,14,14,15,15,16,16,1,2,2,3,4,4,5,5,6,6,7,7,8,8,9,10,10,11,12,12,13,13,14,14,15,15,16,16,1,2,2,3,4,4,5,5,6,6,7',
 				'0,16,16,16,1,2,2,2,2,2,2,2,3,3,3,3,3,3,3,4,4,4,4,4,4,4,5,6,6,6,6,6,6,6,7,7,7,7,7,7,7,8,8,8,8,8,8,8,9,9,10,10,10,10,10,10,10,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,13,14,14,14,14,14,14,14,15,15,15,15,15,15,15,16,16,16,16,16,16,16,16,1,2,2,2,2,2,2,2,3,3,3,3,3,3,3,4,4,4,4,4,4,4,5,6,6,6,6,6,6,6,7,7,7,7,7,7,7,8,8,8,8,8,8,8,9,9,10,10,10,10,10,10,10,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,13,14,14,14,14,14,14,14,15,15,15,15,15,15,15,16,16,16,16,16,16,16,16,1,2,2,2,2,2,2,2,3,3,3,3,3,3,3,4,4,4,4,4,4,4,5,6,6,6,6,6,6,6,7,7,7,7,7,7,7,8,8,8,8,8,8,8,9,9,10,10,10,10,10,10,10,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,13,14,14,14,14,14,14,14,15,15,15,15,15,15,15,16,16,16,16,16,16,16,16,1,2,2,2,2,2,2,2,3,3,3,3,3,3,3,4,4,4,4,4,4,4,5,6,6,6,6,6,6,6,7,7,7,7,7,7,7,8,8,8,8,8,8,8,9,9,10,10,10,10,10,10,10,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,13,14,14,14,14,14,14,14,15,15,15,15,15,15,15,16,16,16,16,16',
 			];
-			break;
+		break;
 	}
 
 	return moonArray;
@@ -432,18 +599,18 @@ function randomizeWeather() {
 	const ordinal = state.mwcal[mwcal.world].ord;
 
 	switch (ordinal) {
-		case ordinal > 330 || ordinal <= 75:
+		case ordinal > 325 || ordinal <= 70:
 			season = 'Winter';
-			break;
-		case ordinal <= 170:
+		break;
+		case ordinal <= 165:
 			season = 'Spring';
-			break;
-		case ordinal <= 260:
+		break;
+		case ordinal <= 255:
 			season = 'Summer';
-			break;
-		case ordinal <= 330:
+		break;
+		case ordinal <= 325:
 			season = 'Fall';
-			break;
+		break;
 	}
 
 	let rand = randomInteger(21);
@@ -455,16 +622,16 @@ function randomizeWeather() {
 			switch (season) {
 				case 'Winter':
 					temp = 'It is a bitterly cold winter day, ';
-					break;
+				break;
 				case 'Spring':
 					temp = 'It is a cold spring day, ';
-					break;
+				break;
 				case 'Summer':
 					temp = 'It is a cool summer day, ';
-					break;
+				break;
 				case 'Fall':
 					temp = 'It is a cold fall day, ';
-					break;
+				break;
 			}
 			break;
 		case rand >= 18 && rand <= 20:
@@ -473,16 +640,16 @@ function randomizeWeather() {
 			switch (season) {
 				case 'Winter':
 					temp = 'It is a mild winter day, ';
-					break;
+				break;
 				case 'Spring':
 					temp = 'It is a hot spring day, ';
-					break;
+				break;
 				case 'Summer':
 					temp = 'It is a blisteringly hot summer day, ';
-					break;
+				break;
 				case 'Fall':
 					temp = 'It is a hot fall day, ';
-					break;
+				break;
 			}
 			break;
 		default:
@@ -490,16 +657,16 @@ function randomizeWeather() {
 			switch (season) {
 				case 'Winter':
 					temp = 'It is a cold winter day, ';
-					break;
+				break;
 				case 'Spring':
 					temp = 'It is a warm spring day, ';
-					break;
+				break;
 				case 'Summer':
 					temp = 'It is a hot summer day, ';
-					break;
+				break;
 				case 'Fall':
 					temp = 'It is a cool fall day, ';
-					break;
+				break;
 			}
 			break;
 	}
@@ -511,30 +678,30 @@ function randomizeWeather() {
 			switch (season) {
 				case 'Winter':
 					precip = 'and snow falls softly from the sky.';
-					break;
+				break;
 				default:
 					precip = 'and it is raining lightly.';
-					break;
+				break;
 			}
 			break;
 		case rand >= 18 && rand <= 20:
 			switch (season) {
 				case 'Winter':
 					precip = 'and snow falls heavily from the sky.';
-					break;
+				break;
 				default:
 					precip = 'and a torrential rain is falling.';
-					break;
+				break;
 			}
 			break;
 		default:
 			switch (randomInteger(2)) {
 				case 1:
 					precip = 'and the sky is clear.';
-					break;
+				break;
 				default:
 					precip = 'and the sky is overcast.';
-					break;
+				break;
 			}
 			break;
 	}
@@ -596,7 +763,7 @@ function calendarMenu() {
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --reset">Reset Calendar</a></div>` + //--
 								`</div>`
 							);
-							break;
+						break;
 						case 1:
 							sendChat(
 								'Multi-World Calendar',
@@ -625,9 +792,9 @@ function calendarMenu() {
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --reset">Reset Calendar</a></div>` + //--
 								`</div>`
 							);
-							break;
+						break;
 					}
-					break;
+				break;
 				case null:
 					switch (mwcal.world) {
 						default:
@@ -656,7 +823,7 @@ function calendarMenu() {
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --reset">Reset Calendar</a></div>` + //--
 								`</div>`
 							);
-							break;
+						break;
 						case 1:
 							sendChat(
 								'Multi-World Calendar',
@@ -683,11 +850,11 @@ function calendarMenu() {
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --reset">Reset Calendar</a></div>` + //--
 								`</div>`
 							);
-							break;
+						break;
 					}
-					break;
+				break;
 			}
-			break;
+		break;
 		case null:
 			switch (moon) {
 				default:
@@ -718,7 +885,7 @@ function calendarMenu() {
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --reset">Reset Calendar</a></div>` + //--
 								`</div>`
 							);
-							break;
+						break;
 						case 1:
 							sendChat(
 								'Multi-World Calendar',
@@ -745,9 +912,9 @@ function calendarMenu() {
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --reset">Reset Calendar</a></div>` + //--
 								`</div>`
 							);
-							break;
+						break;
 					}
-					break;
+				break;
 				case null:
 					switch (mwcal.world) {
 						default:
@@ -774,7 +941,7 @@ function calendarMenu() {
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --reset">Reset Calendar</a></div>` + //--
 								`</div>`
 							);
-							break;
+						break;
 						case 1:
 							sendChat(
 								'Multi-World Calendar',
@@ -799,10 +966,391 @@ function calendarMenu() {
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --reset">Reset Calendar</a></div>` + //--
 								`</div>`
 							);
-							break;
+						break;
 					}
-					break;
+				break;
 			}
-			break;
+		break;
 	}
 }
+
+function showCalendar() {
+	updDate();
+
+	const suffix = getSuffix();
+	const day = state.mwcal[mwcal.world].day;
+	const month = getMonth();
+	const year = state.mwcal[mwcal.world].year;
+	const hour = getHour();
+	const minute = getMinute();
+	const weather = state.mwcal[mwcal.world].wtype ? state.mwcal[mwcal.world].weather : null;
+	const moon = state.mwcal[mwcal.world].mtype ? state.mwcal[mwcal.world].moon : null;
+
+	switch (weather) {
+		default:
+			switch (moon) {
+				default:
+					sendChat('Multi-World Calendar', `<div ${mwcal.style.divMenu}>` + //--
+						`<div ${mwcal.style.header}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
+						`<div ${mwcal.style.sub}>Player View</div>` + //--
+						`<div ${mwcal.style.arrow}></div>` + //--
+						`${day}${suffix} of ${month}, ${year}` + //--
+						`<br>Current Time: ${hour}:${minute}` + //--
+						`<br>Today\'s Weather: ${weather}<br>` + //--
+						`<br>Moon Phase: ${moon}` + //--
+						`</div>`
+					);
+				break;
+				case null:
+					sendChat('Multi-World Calendar', `<div ${mwcal.style.divMenu}>` + //--
+						`<div ${mwcal.style.header}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
+						`<div ${mwcal.style.sub}>Player View</div>` + //--
+						`<div ${mwcal.style.arrow}></div>` + //--
+						`${day}${suffix} of ${month}, ${year}` + //--
+						`<br>Current Time: ${hour}:${minute}` + //--
+						`<br>Today\'s Weather: ${weather}<br>` + //--
+						`</div>`
+					);
+				break;
+			}
+		break;
+		case null:
+			switch (moon) {
+				default:
+					sendChat('Multi-World Calendar', `<div ${mwcal.style.divMenu}>` + //--
+						`<div ${mwcal.style.header}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
+						`<div ${mwcal.style.sub}>Player View</div>` + //--
+						`<div ${mwcal.style.arrow}></div>` + //--
+						`${day}${suffix} of ${month}, ${year}` + //--
+						`<br>Current Time: ${hour}:${minute}` + //--
+						`<br>Moon Phase: ${moon}` + //--
+						`</div>`
+					);
+				break;
+				case null:
+					sendChat('Multi-World Calendar', `<div ${mwcal.style.divMenu}>` + //--
+						`<div ${mwcal.style.header}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
+						`<div ${mwcal.style.sub}>Player View</div>` + //--
+						`<div ${mwcal.style.arrow}></div>` + //--
+						`${day}${suffix} of ${month}, ${year}` + //--
+						`<br>Current Time: ${hour}:${minute}` + //--
+						`</div>`
+					);
+				break;
+			}
+		break;
+	}
+}
+
+function advance(amount, type) {
+	let ordinal = state.mwcal[mwcal.world].ord;
+	const month = state.mwcal[mwcal.world].month;
+	let year = state.mwcal[mwcal.world].year;
+	let hour = state.mwcal[mwcal.world].hour;
+	let minute = state.mwcal[mwcal.world].minute;
+
+	switch (type.toLowerCase()) {
+		case 'short rest':
+			hour += amount;
+		break;
+		case 'long rest':
+			hour += amount * 8;
+		break;
+		case 'minute':
+			minute += amount;
+		break;
+		case 'hour':
+			hour += amount;
+		break;
+		case 'day':
+			ordinal += amount;
+		break;
+		case 'week':
+			ordinal += amount * 7;
+		break;
+		case 'month':
+			switch (mwcal.world) {
+				case 0:
+					ordinal += amount * 30;
+				break;
+				case 1:
+					ordinal += amount * 28;
+				break;
+				case 2:
+					const grhwkDays = [7, 28, 28, 28, 7, 28, 28, 28, 7, 28, 28, 28, 7, 28, 28, 28];
+					for (let i=month; i<month+amount; i++) {
+						if (i > grhwkDays.length) {
+							ordinal += grhwkDays[i-grhwkDays.length];
+						} else {
+							ordinal += grhwkDays[i];
+						}
+					}
+				break;
+				case 3:
+					const modernDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+					for (let i=month; i<month+amount; i++) {
+						if (i > modernDays.length) {
+							ordinal += modernDays[i-modernDays.length];
+						} else {
+							ordinal += modernDays[i];
+						}
+					}
+				break;
+				case 4:
+					const talDays = [29, 30, 30, 31, 28, 31, 32, 29, 27, 29, 32];
+					for (let i=month; i<month+amount; i++) {
+						if (i > talDays.length) {
+							ordinal += talDays[i-talDays.length];
+						} else {
+							ordinal += talDays[i];
+						}
+					}
+				break;
+			}
+
+			updDate();
+		break;
+		case 'year':
+			year += amount;
+		break;
+	}
+
+	while (minute >= 60) {
+		hour++;
+		minute -= 60;
+	}
+
+	while (hour >= 24) {
+		ordinal++;
+		hour -= 24;
+	}
+
+	switch (mwcal.world) {
+		case 0:
+			while (ordinal > 360) {
+				ordinal -= 360;
+				year++;
+			}
+		break;
+		case 1:
+			while (ordinal > 336) {
+				ordinal -= 364;
+				year++;
+			}
+		break;
+		case 2:
+			while (ordinal > 364) {
+				ordinal -= 365;
+				year++;
+			}
+		break;
+		case 3:
+			while (ordinal > 365) {
+				ordinal -= 365;
+				year++;
+			}
+		break;
+		case 4:
+			while (ordinal > 328) {
+				ordinal -= 328;
+				year++;
+			}
+		break;
+	}
+
+	setHour(hour);
+	setMinute(minute);
+	setYear(year);
+	updDate();
+}
+
+function alarmMenu(num) {
+	const alarm = state.alarms[mwcal.world][num];
+	const list = [];
+	const len = state.alarms[mwcal.world].length;
+
+	if (!alarm) {
+		if (!len || len === 0) {
+			sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
+				`<div ${mwcal.style.header}>Alarm Menu</div>` + //--
+				`<div ${mwcal.style.arrow}></div>` + //--
+				`<div ${mwcal.style.divButton}>No Alarms set</div>` + //--
+				`<br><br>` + //--
+				`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message}">Create Alarm</a></div>` + //--
+				`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal">Open Calendar</a></div>` + //--
+				`</div>`
+			);
+		} else {
+			for (let i=0; i<len; i++) {
+				list.push(i);
+			}
+
+			const alarmList = list.join('|');
+
+			sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
+				`<div ${mwcal.style.header}>Alarm Menu</div>` + //--
+				`<div ${mwcal.style.arrow}></div>` + //--
+				`<table>` + //--
+				`<tr><td ${mwcal.style.tdReg}>Alarm: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --?{Alarm?|${alarmList}}">Not selected</a></td></tr>` + //--
+				`</table>` + //--
+				`<br><br>` + //--
+				`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message}">Create Alarm</a></div>` + //--
+				`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal">Open Calendar</a></div>` + //--
+				`</div>`
+			);
+		}
+	} else {
+		for (let i=0; i<len; i++) {
+			list.push(i);
+		}
+
+		const alarmList = list.join('|');
+
+		const title = alarm.title;
+		const date = `${alarm.day}.${alarm.month}.${alarm.year}`;
+		const time = `${alarm.hour}:${alarm.minute}`;
+		const splitDate = date.split('.');
+		const splitTime = time.split(':');
+		const message = alarm.message;
+
+		sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
+			`<div ${mwcal.style.header}>Alarm Menu</div>` + //--
+			`<div ${mwcal.style.arrow}></div>` + //--
+			`<table>` + //--
+			`<tr><td ${mwcal.style.tdReg}>Alarm: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --?{Alarm?|${alarmList}}">${title}</a></td></tr>` + //--
+			`<tr><td ${mwcal.style.tdReg}>Title: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --settitle --?{Title?|Insert Title}">${title}</td></tr>` + //--
+			`<tr><td ${mwcal.style.tdReg}>Date: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --setdate --?{Day?|${splitDate[0]}}.?{Month?|${splitDate[1]}}.?{Year?|${splitDate[2]}}">${date}</td></tr>` + //--
+			`<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --settime --?{Hour?|${splitTime[0]}}:?{Minute?|${splitTime[1]}}">${time}</td></tr>` + //--
+			`<tr><td ${mwcal.style.tdReg}>Message: </td><td ${mwcal.style.tdReg}>${message}</td></tr>` + //--
+			`</table>` + //--
+			`<br><br>` + //--
+			`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --${num} --setmessage --?{Message?|Insert Message}">Set Message</a></div>` + //--
+			`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message}">Create Alarm</a></div>` + //--
+			`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --${num} --delete">Delete Alarm</a></div>` + //--
+			`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal">Open Calendar</a></div>` + //--
+			`</div>`
+		);
+	}
+}
+
+function createAlarm(title, date, time, message) {
+	const splitDate = date.split('.');
+	const splitTime = time.split(':');
+	const alarm = {
+		title: title,
+		day: splitDate[0],
+		month: splitDate[1],
+		year: splitDate[2],
+		hour: splitTime[0],
+		minute: splitTime[1],
+		message: message
+	};
+
+	state.alarms[mwcal.world].push(alarm);
+
+	sendChat('Multi-World Calendar' `/w gm Alarm #${state.alarms[mwcal.world].length - 1} created!\n` + //--
+		`Title: ${title}\n` + //--
+		`Date: ${date}\n` + //--
+		`Time: ${time}\n` + //--
+		`Message: ${message}`
+	);
+
+	alarmMenu(state.alarms[mwcal.world].length - 1);
+}
+
+function setTitle(num, title) {
+	state.alarms[mwcal.world][num].title = title;
+
+	sendChat('Multi-World Calendar', `/w gm Alarm #${num} title set to \"${title}\"`);
+}
+
+function setDate(num, date) {
+	const splitDate = date.split('.');
+	state.alarms[mwcal.world][num].day = splitDate[0];
+	state.alarms[mwcal.world][num].month = splitDate[1];
+	state.alarms[mwcal.world][num].year = splitDate[2];
+
+	sendChat('Multi-World Calendar', `/w gm Alarm #${num} date set to ${date}`);
+}
+
+function setTime(num, time) {
+	const splitTime = time.split(':');
+	state.alarms[mwcal.world][num].hour = splitTime[0];
+	state.alarms[mwcal.world][num].minute = splitTime[1];
+
+	sendChat('Multi-World Calendar', `/w gm Alarm #${num} time set to ${time}`);
+}
+
+function setMessage(num, message) {
+	state.alarms[mwcal.world][num].message = message;
+
+	sendChat('Multi-World Calendar', `/w gm Alarm #${num} message set to \"${message}\"`);
+}
+
+function deleteAlarm(num) {
+	state.alarms[mwcal.world].splice(num, 1);
+
+	sendChat('Multi-World Calendar', `/w gm Alarm #${num} deleted`);
+}
+
+function updAlarm(num) {
+	const alarm = state.alarms[mwcal.world][num];
+	
+	if (!alarm) {
+		sendChat('Multi-World Calendar', '/w gm This Alarm does not exist!')
+	} else {
+		const title = alarm.title;
+		const date = `${alarm.day}.${alarm.month}.${alarm.year}`;
+		const time = `${alarm.hour}:${alarm.minute}`;
+		const message = alarm.message;
+
+		let hand = findObjs({ _type: 'handout', name: `Alarm #${num}` }, { caseInsensitive: true })[0];
+
+		if (!hand) {
+			hand = createObj('handout', {
+				name: `Alarm #${num}`,
+			});
+		}
+
+		hand.set('notes', `Title: ${title}\n` + //--
+			`Date: ${date}\n` + //--
+			`Time: ${time}\n` + //--
+			`Message: ${message}`
+		);
+	}
+}
+
+function chkAlarms() {
+	state.alarms[mwcal.world].forEach(alarm => {
+		if (alarm.hour) {
+			if (alarm.year === state.mwcal[mwcal.world].year && alarm.month === state.mwcal[mwcal.world].month && (alarm.day >= state.mwcal[mwcal.world].day && !(alarm.day >= state.mwcal[mwcal.world].day+7)) && (alarm.hour >= state.mwcal[mwcal.world].hour && !(alarm.hour >= state.mwcal[mwcal.world].hour+12)) && (alarm.minute >= state.mwcal[mwcal.world].minute && !(alarm.minute >= state.mwcal[mwcal.world].minute+30))) {
+				const alarmNum = state.alarms[mwcal.world].indexOf(alarm);
+				
+				sendChat('Multi-World Calendar', `/w gm Alarm #${alarmNum} triggered!\n` + //--
+					`Title: ${alarm.title}\n` + //--
+					`Date: ${alarm.day}.${alarm.month}.${alarm.year}\n` + //--
+					`Time: ${alarm.hour}:${alarm.minute}\n` + //--
+					`Message: ${alarm.message}`
+				);
+
+				deleteAlarm(alarmNum);
+			}
+		} else {
+			if (alarm.year === state.mwcal[mwcal.world].year && alarm.month === state.mwcal[mwcal.world].month && (alarm.day >= state.mwcal[mwcal.world].day && !(alarm.day >= state.mwcal[mwcal.world].day+7))) {
+				const alarmNum = state.alarms[mwcal.world].indexOf(alarm);
+				
+				sendChat('Multi-World Calendar', `/w gm Alarm #${alarmNum} triggered!\n` + //--
+					`Title: ${alarm.title}\n` + //--
+					`Date: ${alarm.day}.${alarm.month}.${alarm.year}\n` + //--
+					`Message: ${alarm.message}`
+				);
+
+				deleteAlarm(alarmNum);
+			}
+		}
+	});
+}
+
+on('ready', () => {
+	
+});
