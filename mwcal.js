@@ -94,14 +94,16 @@ const monthNames = [
 ];
 
 class MultiWorldCalendar {
-	static style = styles;
-	static world = 0;
-	static moons = moonPhases;
-	static months = monthNames;
-	static alarms = [state.alarms.faerun, state.alarms.eberron, state.alarms.greyhawk, state.alarms.modern, state.alarms.talDorei];
-	static worlds = ['faerun', 'eberron', 'greyhawk', 'modern', "Tal'Dorei"];
+    constructor() {
+        this.style = styles;
+        this.world = 0;
+        this.moons = moonPhases;
+        this.months = monthNames;
+        this.alarms = state.alarms.faerun ? [state.alarms.faerun, state.alarms.eberron, state.alarms.greyhawk, state.alarms.modern, state.alarms.talDorei] : [];
+        this.worlds = ['faerun', 'eberron', 'greyhawk', 'modern', "tal'dorei"];
+    }
 
-	static handleInput(msg) {
+	handleInput(msg) {
 		const args = msg.content.split(/\s+--/);
 
 		if (msg.type !== 'api') return;
@@ -184,6 +186,11 @@ class MultiWorldCalendar {
 								calendarMenu();
 							}
 						break;
+						case 'world':
+							setWorld(args[2]);
+							chkAlarms();
+							calendarMenu();
+						break;
 						case 'show':
 							showCalendar();
 						break;
@@ -244,9 +251,9 @@ class MultiWorldCalendar {
 		}
 	}
 
-	static checkInstall() {
+	checkInstall() {
 		if (!state.mwcal) {
-			setMECalDefaults();
+			setMWCalDefaults();
 		}
 
 		if (!state.alarms) {
@@ -254,13 +261,13 @@ class MultiWorldCalendar {
 		}
 	}
 
-	static registerEventHandlers() {
+	registerEventHandlers() {
 		on('chat:message', this.handleInput);
 		log('Multi-World Calendar - Registered Event Handlers!');
 	}
 }
 
-const mwcal = MultiWorldCalendar;
+const mwcal = new MultiWorldCalendar();
 
 function setMWCalDefaults() {
 	state.mwcal = [
@@ -317,7 +324,7 @@ function setMWCalDefaults() {
 			wtype: true,
 		},
 		{
-			name: 'Tal\'Dorei',
+			name: "Tal'Dorei",
 			ord: 1,
 			year: 812,
 			day: 1,
@@ -342,6 +349,8 @@ function setAlarmDefaults() {
 		modern: [],
 		talDorei: []
 	};
+	
+	mwcal.alarms = [state.alarms.faerun, state.alarms.eberron, state.alarms.greyhawk, state.alarms.modern, state.alarms.talDorei];
 
 	log('Multi-World Calendar - Successfully registered Alarm Defaults!');
 }
@@ -373,6 +382,7 @@ function setWorld(world) {
 	if (!(mwcal.worlds.includes(world.toLowerCase()))) return sendChat('Multi-World Calendar', 'Invalid World. Please make sure to either use the correct Name!');
 
 	mwcal.world = mwcal.worlds.indexOf(world.toLowerCase())
+	log(mwcal.world);
 }
 
 function getSuffix() {
