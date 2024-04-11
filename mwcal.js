@@ -94,16 +94,14 @@ const monthNames = [
 ];
 
 class MultiWorldCalendar {
-	constructor() {
-		this.style = styles;
-		this.world = 0;
-		this.moons = moonPhases;
-		this.months = monthNames;
-		this.alarms = [state.alarms.faerun, state.alarms.eberron, state.alarms.greyhawk, state.alarms.modern, state.alarms.talDorei];
-		this.worlds = ['faerun', 'eberron', 'greyhawk', 'modern', 'tal\'dorei'];
-	}
+	static style = styles;
+	static world = 0;
+	static moons = moonPhases;
+	static months = monthNames;
+	static alarms = [state.alarms.faerun, state.alarms.eberron, state.alarms.greyhawk, state.alarms.modern, state.alarms.talDorei];
+	static worlds = ['faerun', 'eberron', 'greyhawk', 'modern', "Tal'Dorei"];
 
-	handleInput(msg) {
+	static handleInput(msg) {
 		const args = msg.content.split(/\s+--/);
 
 		if (msg.type !== 'api') return;
@@ -246,9 +244,9 @@ class MultiWorldCalendar {
 		}
 	}
 
-	checkInstall() {
+	static checkInstall() {
 		if (!state.mwcal) {
-			setMWCalDefaults();
+			setMECalDefaults();
 		}
 
 		if (!state.alarms) {
@@ -256,13 +254,13 @@ class MultiWorldCalendar {
 		}
 	}
 
-	registerEventHandlers() {
+	static registerEventHandlers() {
 		on('chat:message', this.handleInput);
 		log('Multi-World Calendar - Registered Event Handlers!');
 	}
 }
 
-const mwcal = new MultiWorldCalendar();
+const mwcal = MultiWorldCalendar;
 
 function setMWCalDefaults() {
 	state.mwcal = [
@@ -333,7 +331,7 @@ function setMWCalDefaults() {
 		},
 	];
 
-	log('Multi-World Calendar: Successfully registered Calendar defaults!');
+	log('Multi-World Calendar - Successfully registered Calendar Defaults!');
 }
 
 function setAlarmDefaults() {
@@ -345,34 +343,36 @@ function setAlarmDefaults() {
 		talDorei: []
 	};
 
-	log('Multi-World Calendar: Successfully registered Alarm defaults!');
+	log('Multi-World Calendar - Successfully registered Alarm Defaults!');
 }
 
 function updOrdinal() {
 	switch (mwcal.world) {
 		case 0:
-			state.mwcal[mwcal.world].ord = 30 * (state.mwcal[mwcal.world].month - 1) + state.mwcal[world].day;
-			break;
+			state.mwcal[0].ord = 30 * (state.mwcal[0].month - 1) + state.mwcal[0].day;
+		break;
 		case 1:
-			state.mwcal[mwcal.world].ord = 28 * (state.mwcal[mwcal.world].month - 1) + state.mwcal[world].day;
-			break;
+			state.mwcal[1].ord = 28 * (state.mwcal[1].month - 1) + state.mwcal[1].day;
+		break;
 		case 2:
 			const grhwkDays = [7, 28, 28, 28, 7, 28, 28, 28, 7, 28, 28, 28, 7, 28, 28, 28];
-			state.mwcal[mwcal.world].ord = grhwkDays.slice(0, state.mwcal[mwcal.world].month - 1).reduce((a, b) => a + b, 0) + state.mwcal[world].day;
-			break;
+			state.mwcal[2].ord = grhwkDays.slice(0, state.mwcal[2].month - 1).reduce((a, b) => a + b, 0) + state.mwcal[2].day;
+		break;
 		case 3:
 			const modernDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-			state.mwcal[mwcal.world].ord = modernDays.slice(0, state.mwcal[mwcal.world].month - 1).reduce((a, b) => a + b, 0) + state.mwcal[world].day;
-			break;
+			state.mwcal[3].ord = modernDays.slice(0, state.mwcal[3].month - 1).reduce((a, b) => a + b, 0) + state.mwcal[3].day;
+		break;
 		case 4:
 			const talDays = [29, 30, 30, 31, 28, 31, 32, 29, 27, 29, 32];
-			state.mwcal[mwcal.world].ord = talDays.slice(0, state.mwcal[mwcal.world].month - 1).reduce((a, b) => a + b, 0) + state.mwcal[world].day;
-			break;
+			state.mwcal[4].ord = talDays.slice(0, state.mwcal[4].month - 1).reduce((a, b) => a + b, 0) + state.mwcal[4].day;
+		break;
 	}
 }
 
 function setWorld(world) {
-	mwcal.world = mwcal.worlds.indexOf(world.toLowerCase());
+	if (!(mwcal.worlds.includes(world.toLowerCase()))) return sendChat('Multi-World Calendar', 'Invalid World. Please make sure to either use the correct Name!');
+
+	mwcal.world = mwcal.worlds.indexOf(world.toLowerCase())
 }
 
 function getSuffix() {
@@ -391,7 +391,6 @@ function getSuffix() {
 function updDate() {
 	const world = mwcal.world;
 	const ordinal = state.mwcal[world].ord;
-
 	let date, month;
 
 	switch (world) {
@@ -456,21 +455,24 @@ function updDate() {
 
 function setDay(day) {
 	state.mwcal[mwcal.world].day = day;
+	updOrdinal();
 }
 
 function getMonth() {
 	const month = state.mwcal[mwcal.world].month;
-	return monthNames[mwcal.world][month - 1];
+	return mwcal.months[mwcal.world][month-1];
 }
 
 function setMonth(month) {
-	const months = monthNames[mwcal.world];
+	const months = mwcal.months[mwcal.world];
 	state.mwcal[mwcal.world].month = months.indexOf(month) + 1;
+	updOrdinal();
 }
 
 function setMonthName(month, name) {
-	monthNames[mwcal.world].indexOf(month) = name;
-	state.months = monthNames;
+	const monnum = mwcal.months[mwcal.world].indexOf(month)
+	mwcal.months[mwcal.world][monnum] = name;
+	monthNames = mwcal.months;
 }
 
 function setYear(year) {
@@ -736,9 +738,7 @@ function calendarMenu() {
 				default:
 					switch (mwcal.world) {
 						default:
-							sendChat(
-								'Multi-World Calendar',
-								`/w gm <div ${mwcal.style.divMenu}>` + //--
+							sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
 								`<div ${mwcal.style.header}>Multi-World Calendar</div>` + //--
 								`<div ${mwcal.style.sub}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
 								`<div ${mwcal.style.arrow}></div>` + //--
@@ -748,7 +748,7 @@ function calendarMenu() {
 								`<tr><td ${mwcal.style.tdReg}>Month: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setmonth --?{Month?|${months}}">${month}</a></td></tr>` + //--
 								`<tr><td ${mwcal.style.tdReg}>Year: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setyear --?{Year?|${year}}">${year}</a></td></tr>` + //--
 								`<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --settime --hour --?{Hour?|${hour}} --minute --?{Minute?|${minute}}">${hour}:${minute}</a></td></tr>` + //--
-								`<tr><td ${mwcal.style.tdReg}>Moon: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --moon --phase --?{Phase?|${mwcal.moons[mwcal.world].join('|')}}">${moon}</a></td></tr>` + //--
+								`<tr><td ${mwcal.style.tdReg}>Moon: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --moon --phase --?{Phase?|${mwcal.moons.join('|')}}">${moon}</a></td></tr>` + //--
 								`<tr><td ${mwcal.style.tdReg}>Weather: </td><td ${mwcal.style.tdReg}>${weather}</td></tr>` + //--
 								`</table>` + //--
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --advance --?{Amount?|1} --?{Type?|Short Rest|Long Rest|Minute|Hour|Day|Week|Month|Year}">Advance Time</a></div>` + //--
@@ -765,9 +765,7 @@ function calendarMenu() {
 							);
 						break;
 						case 1:
-							sendChat(
-								'Multi-World Calendar',
-								`/w gm <div ${mwcal.style.divMenu}>` + //--
+							sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
 								`<div ${mwcal.style.header}>Multi-World Calendar</div>` + //--
 								`<div ${mwcal.style.sub}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
 								`<div ${mwcal.style.arrow}></div>` + //--
@@ -798,9 +796,7 @@ function calendarMenu() {
 				case null:
 					switch (mwcal.world) {
 						default:
-							sendChat(
-								'Multi-World Calendar',
-								`/w gm <div ${mwcal.style.divMenu}>` + //--
+							sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
 								`<div ${mwcal.style.header}>Multi-World Calendar</div>` + //--
 								`<div ${mwcal.style.sub}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
 								`<div ${mwcal.style.arrow}></div>` + //--
@@ -825,9 +821,7 @@ function calendarMenu() {
 							);
 						break;
 						case 1:
-							sendChat(
-								'Multi-World Calendar',
-								`/w gm <div ${mwcal.style.divMenu}>` + //--
+							sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
 								`<div ${mwcal.style.header}>Multi-World Calendar</div>` + //--
 								`<div ${mwcal.style.sub}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
 								`<div ${mwcal.style.arrow}></div>` + //--
@@ -860,9 +854,7 @@ function calendarMenu() {
 				default:
 					switch (mwcal.world) {
 						default:
-							sendChat(
-								'Multi-World Calendar',
-								`/w gm <div ${mwcal.style.divMenu}>` + //--
+							sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
 								`<div ${mwcal.style.header}>Multi-World Calendar</div>` + //--
 								`<div ${mwcal.style.sub}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
 								`<div ${mwcal.style.arrow}></div>` + //--
@@ -872,7 +864,7 @@ function calendarMenu() {
 								`<tr><td ${mwcal.style.tdReg}>Month: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setmonth --?{Month?|${months}}">${month}</a></td></tr>` + //--
 								`<tr><td ${mwcal.style.tdReg}>Year: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setyear --?{Year?|${year}}">${year}</a></td></tr>` + //--
 								`<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --settime --hour --?{Hour?|${hour}} --minute --?{Minute?|${minute}}">${hour}:${minute}</a></td></tr>` + //--
-								`<tr><td ${mwcal.style.tdReg}>Moon: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --moon --phase --?{Phase?|${mwcal.moons[mwcal.world].join('|')}}">${moon}</a></td></tr>` + //--
+								`<tr><td ${mwcal.style.tdReg}>Moon: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --moon --phase --?{Phase?|${mwcal.moons.join('|')}}">${moon}</a></td></tr>` + //--
 								`</table>` + //--
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --advance --?{Amount?|1} --?{Type?|Short Rest|Long Rest|Minute|Hour|Day|Week|Month|Year}">Advance Time</a></div>` + //--
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --weather --toggle">Toggle Weather Display</a></div>` + //--
@@ -887,9 +879,7 @@ function calendarMenu() {
 							);
 						break;
 						case 1:
-							sendChat(
-								'Multi-World Calendar',
-								`/w gm <div ${mwcal.style.divMenu}>` + //--
+							sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
 								`<div ${mwcal.style.header}>Multi-World Calendar</div>` + //--
 								`<div ${mwcal.style.sub}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
 								`<div ${mwcal.style.arrow}></div>` + //--
@@ -918,9 +908,7 @@ function calendarMenu() {
 				case null:
 					switch (mwcal.world) {
 						default:
-							sendChat(
-								'Multi-World Calendar',
-								`/w gm <div ${mwcal.style.divMenu}>` + //--
+							sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
 								`<div ${mwcal.style.header}>Multi-World Calendar</div>` + //--
 								`<div ${mwcal.style.sub}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
 								`<div ${mwcal.style.arrow}></div>` + //--
@@ -943,9 +931,7 @@ function calendarMenu() {
 							);
 						break;
 						case 1:
-							sendChat(
-								'Multi-World Calendar',
-								`/w gm <div ${mwcal.style.divMenu}>` + //--
+							sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
 								`<div ${mwcal.style.header}>Multi-World Calendar</div>` + //--
 								`<div ${mwcal.style.sub}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
 								`<div ${mwcal.style.arrow}></div>` + //--
@@ -1158,6 +1144,7 @@ function advance(amount, type) {
 		break;
 	}
 
+	state.mwcal[mwcal.world].ord = ordinal;
 	setHour(hour);
 	setMinute(minute);
 	setYear(year);
@@ -1321,36 +1308,40 @@ function updAlarm(num) {
 }
 
 function chkAlarms() {
-	state.alarms[mwcal.world].forEach(alarm => {
-		if (alarm.hour) {
-			if (alarm.year === state.mwcal[mwcal.world].year && alarm.month === state.mwcal[mwcal.world].month && (alarm.day >= state.mwcal[mwcal.world].day && !(alarm.day >= state.mwcal[mwcal.world].day+7)) && (alarm.hour >= state.mwcal[mwcal.world].hour && !(alarm.hour >= state.mwcal[mwcal.world].hour+12)) && (alarm.minute >= state.mwcal[mwcal.world].minute && !(alarm.minute >= state.mwcal[mwcal.world].minute+30))) {
-				const alarmNum = state.alarms[mwcal.world].indexOf(alarm);
-				
-				sendChat('Multi-World Calendar', `/w gm Alarm #${alarmNum} triggered!\n` + //--
-					`Title: ${alarm.title}\n` + //--
-					`Date: ${alarm.day}.${alarm.month}.${alarm.year}\n` + //--
-					`Time: ${alarm.hour}:${alarm.minute}\n` + //--
-					`Message: ${alarm.message}`
-				);
-
-				deleteAlarm(alarmNum);
+	const alarms = state.alarms[mwcal.world];
+	if (alarms) {
+			alarms.forEach(alarm => {
+			if (alarm.hour) {
+				if (alarm.year === state.mwcal[mwcal.world].year && alarm.month === state.mwcal[mwcal.world].month && (alarm.day >= state.mwcal[mwcal.world].day && !(alarm.day >= state.mwcal[mwcal.world].day+7)) && (alarm.hour >= state.mwcal[mwcal.world].hour && !(alarm.hour >= state.mwcal[mwcal.world].hour+12)) && (alarm.minute >= state.mwcal[mwcal.world].minute && !(alarm.minute >= state.mwcal[mwcal.world].minute+30))) {
+					const alarmNum = state.alarms[mwcal.world].indexOf(alarm);
+					
+					sendChat('Multi-World Calendar', `/w gm Alarm #${alarmNum} triggered!\n` + //--
+						`Title: ${alarm.title}\n` + //--
+						`Date: ${alarm.day}.${alarm.month}.${alarm.year}\n` + //--
+						`Time: ${alarm.hour}:${alarm.minute}\n` + //--
+						`Message: ${alarm.message}`
+					);
+	
+					deleteAlarm(alarmNum);
+				}
+			} else {
+				if (alarm.year === state.mwcal[mwcal.world].year && alarm.month === state.mwcal[mwcal.world].month && (alarm.day >= state.mwcal[mwcal.world].day && !(alarm.day >= state.mwcal[mwcal.world].day+7))) {
+					const alarmNum = state.alarms[mwcal.world].indexOf(alarm);
+					
+					sendChat('Multi-World Calendar', `/w gm Alarm #${alarmNum} triggered!\n` + //--
+						`Title: ${alarm.title}\n` + //--
+						`Date: ${alarm.day}.${alarm.month}.${alarm.year}\n` + //--
+						`Message: ${alarm.message}`
+					);
+	
+					deleteAlarm(alarmNum);
+				}
 			}
-		} else {
-			if (alarm.year === state.mwcal[mwcal.world].year && alarm.month === state.mwcal[mwcal.world].month && (alarm.day >= state.mwcal[mwcal.world].day && !(alarm.day >= state.mwcal[mwcal.world].day+7))) {
-				const alarmNum = state.alarms[mwcal.world].indexOf(alarm);
-				
-				sendChat('Multi-World Calendar', `/w gm Alarm #${alarmNum} triggered!\n` + //--
-					`Title: ${alarm.title}\n` + //--
-					`Date: ${alarm.day}.${alarm.month}.${alarm.year}\n` + //--
-					`Message: ${alarm.message}`
-				);
-
-				deleteAlarm(alarmNum);
-			}
-		}
-	});
+		});
+	}
 }
 
 on('ready', () => {
-	
+	mwcal.checkInstall();
+	mwcal.registerEventHandlers();
 });
