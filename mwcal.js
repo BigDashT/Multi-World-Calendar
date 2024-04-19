@@ -99,7 +99,6 @@ class MultiWorldCalendar {
         this.world = 0;
         this.moons = moonPhases;
         this.months = monthNames;
-        this.alarms = state.alarms.faerun ? [state.alarms.faerun, state.alarms.eberron, state.alarms.greyhawk, state.alarms.modern, state.alarms.talDorei] : [];
         this.worlds = ['faerun', 'eberron', 'greyhawk', 'modern', "tal'dorei"];
     }
 
@@ -252,6 +251,12 @@ class MultiWorldCalendar {
 	}
 
 	checkInstall() {
+		if (!state.check) {
+			state.check = true;
+			setMWCalDefaults();
+			setAlarmDefaults();
+		}
+
 		if (!state.mwcal) {
 			setMWCalDefaults();
 		}
@@ -349,8 +354,6 @@ function setAlarmDefaults() {
 		modern: [],
 		talDorei: []
 	};
-	
-	mwcal.alarms = [state.alarms.faerun, state.alarms.eberron, state.alarms.greyhawk, state.alarms.modern, state.alarms.talDorei];
 
 	log('Multi-World Calendar - Successfully registered Alarm Defaults!');
 }
