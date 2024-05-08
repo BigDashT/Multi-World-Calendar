@@ -99,7 +99,7 @@ class MultiWorldCalendar {
         this.world = 0;
         this.moons = moonPhases;
         this.months = monthNames;
-        this.worlds = ['faerun', 'eberron', 'greyhawk', 'modern', "tal'dorei"];
+        this.worlds = ['Faerun', 'Eberron', 'Greyhawk', 'Modern', "Tal'Dorei"];
     }
 
 	handleInput(msg) {
@@ -382,18 +382,17 @@ function updOrdinal() {
 }
 
 function setWorld(world) {
-	if (!(mwcal.worlds.includes(world.toLowerCase()))) return sendChat('Multi-World Calendar', 'Invalid World. Please make sure to either use the correct Name!');
+	if (!(mwcal.worlds.find(w => w.toLowerCase() === world.toLowerCase()))) return sendChat('Multi-World Calendar', 'Invalid World. Please make sure to either use the correct Name!');
 
-	mwcal.world = mwcal.worlds.indexOf(world.toLowerCase())
-	log(mwcal.world);
+	mwcal.world = mwcal.worlds.findIndex(w => w.toLowerCase() === world.toLowerCase());
 }
 
 function getSuffix() {
-	const ordinal = state.mwcal[mwcal.world].ord;
+	const day = state.mwcal[mwcal.world].day;
 
-	if (ordinal >= 11 && ordinal <= 13) return 'th';
+	if (day >= 11 && day <= 13) return 'th';
 
-	switch (ordinal % 10) {
+	switch (day % 10) {
 		case 1: return 'st';
 		case 2: return 'nd';
 		case 3: return 'rd';
@@ -409,61 +408,87 @@ function updDate() {
 	switch (world) {
 		case 0:
 			if (Math.ceil(ordinal / 30) <= 1) {
-				month = monthNames[0][0];
+				month = monthNames[world][0];
 				date = ordinal;
 			} else {
-				month = monthNames[0][Math.ceil(ordinal / 30) - 1];
+				month = monthNames[world][Math.ceil(ordinal / 30) - 1];
 				date = ordinal - (Math.ceil(ordinal / 30) - 1) * 30;
 			}
 		break;
 		case 1:
 			if (Math.ceil(ordinal / 28) <= 1) {
-				month = monthNames[1][0];
+				month = monthNames[world][0];
 				date = ordinal;
 			} else {
-				month = monthNames[1][Math.ceil(ordinal / 28) - 1];
+				month = monthNames[world][Math.ceil(ordinal / 28) - 1];
 				date = ordinal - (Math.ceil(ordinal / 28) - 1) * 28;
 			}
 		break;
 		case 2:
 			const grhwkDays = [7, 28, 28, 28, 7, 28, 28, 28, 7, 28, 28, 28, 7, 28, 28, 28];
-			const grhwkDay = grhwkDays[state.mwcal[world].month - 1];
-			if (Math.ceil(ordinal / grhwkDay) <= 1) {
-				month = monthNames[2][0];
+
+			if (ordinal <= 7) {
+				month = monthNames[world][0];
 				date = ordinal;
 			} else {
-				month = monthNames[2][Math.ceil(ordinal / grhwkDay) - 1];
-				date = ordinal - (Math.ceil(ordinal / grhwkDay) - 1) * grhwkDay;
+			    let count = ordinal;
+				for (let i=0; i<grhwkDays.length; i++) {
+				    count -= grhwkDays[i];
+				    
+				    if (count <= 0) {
+				        month = monthNames[world][i];
+				        break;
+				    }
+				}
+				
+				date = ordinal - grhwkDays.slice(0, monthNames[world].findIndex(m => m === month)).reduce((a, b) => a + b, 0) + state.mwcal[world].day - 1;
 			}
 		break;
 		case 3:
 			const modernDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-			const modDay = modernDays[state.mwcal[world].month - 1];
-
-			if (Math.ceil(ordinal / modDay) <= 1) {
-				month = monthNames[3][0];
+			
+			if (ordinal <= 31) {
+				month = monthNames[world][0];
 				date = ordinal;
 			} else {
-				month = monthNames[3][Math.ceil(ordinal / modDay) - 1];
-				date = ordinal - (Math.ceil(ordinal / modDay) - 1) * modDay;
+				let count = ordinal;
+				for (let i=0; i<modernDays.length; i++) {
+				    count -= modernDays[i];
+				    
+				    if (count <= 0) {
+				        month = monthNames[world][i];
+				        break;
+				    }
+				}
+				
+				date = ordinal - modernDays.slice(0, monthNames[world].findIndex(m => m === month)).reduce((a, b) => a + b, 0) + state.mwcal[world].day - 1;
 			}
 		break;
 		case 4:
 			const talDays = [29, 30, 30, 31, 28, 31, 32, 29, 27, 29, 32];
-			const talDay = talDays[state.mwcal[world].month - 1];
-
-			if (Math.ceil(ordinal / talDay) <= 1) {
-				month = monthNames[4][0];
+			
+			if (ordinal <= 29) {
+				month = monthNames[world][0];
 				date = ordinal;
 			} else {
-				month = monthNames[4][Math.ceil(ordinal / talDay) - 1];
-				date = ordinal - (Math.ceil(ordinal / talDay) - 1) * talDay;
+				let count = ordinal;
+				for (let i=0; i<talDays.length; i++) {
+				    count -= talDays[i];
+				    
+				    if (count <= 0) {
+				        month = monthNames[world][i];
+				        break;
+				    }
+				}
+				
+				date = ordinal - talDays.slice(0, monthNames[world].findIndex(m => m === month)).reduce((a, b) => a + b, 0) + state.mwcal[world].day - 1;
 			}
 		break;
 	}
 
-	setMonth(month);
-	setDay(date);
+	state.mwcal[world].month = monthNames[world].indexOf(month) + 1;
+	state.mwcal[world].day = date;
+	updOrdinal();
 }
 
 function setDay(day) {
@@ -479,6 +504,7 @@ function getMonth() {
 function setMonth(month) {
 	const months = mwcal.months[mwcal.world];
 	state.mwcal[mwcal.world].month = months.indexOf(month) + 1;
+	log('Month: ' + state.mwcal[mwcal.world].month)
 	updOrdinal();
 }
 
