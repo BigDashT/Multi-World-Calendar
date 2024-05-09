@@ -68,7 +68,7 @@ Displays the Calendar to the Players
 */
 
 const styles = {
-	divMenu: 'style="width: 300px; border: 1px solid black; background-color: #ffffff; padding: 5px;"',
+	divMenu: 'style="width: 200px; border: 1px solid black; background-color: #ffffff; padding: 5px;"',
 	divButton: 'style="text-align:center;"',
 	buttonSmall: 'style="text-align:center; border: 1px solid black; margin: 1px; background-color: #7E2D40; border-radius: 4px;  box-shadow: 1px 1px 1px #707070; width: 75px;',
 	buttonMedium: 'style="text-align:center; border: 1px solid black; margin: 1px; background-color: #7E2D40; border-radius: 4px;  box-shadow: 1px 1px 1px #707070; width: 100px;',
@@ -77,7 +77,7 @@ const styles = {
 	arrow: 'style="border: none; border-top: 3px solid transparent; border-bottom: 3px solid transparent; border-left: 195px solid rgb(126, 45, 64); margin-bottom: 2px; margin-top: 2px;"',
 	header: 'style="color: rgb(126, 45, 64); font-size: 18px; text-align: left; font-variant: small-caps; font-family: Times, serif;"',
 	sub: 'style="font-size: 11px; line-height: 13px; margin-top: -3px; font-style: italic;"',
-	tdReg: 'style="text-align: right;"',
+	tdReg: 'style="padding: 2px; padding-left: 5px; border: none;"',
 	trTab: 'style="text-align: left; border-bottom: 1px solid #cccccc;"',
 	tdTab: 'style="text-align: center; border-right: 1px solid #cccccc;"',
 	span: 'style="display: inline; width: 10px; height: 10px; padding: 1px; border: 1px solid black; background-color: white;"',
@@ -99,8 +99,7 @@ class MultiWorldCalendar {
         this.world = 0;
         this.moons = moonPhases;
         this.months = monthNames;
-        this.alarms = state.alarms.faerun ? [state.alarms.faerun, state.alarms.eberron, state.alarms.greyhawk, state.alarms.modern, state.alarms.talDorei] : [];
-        this.worlds = ['faerun', 'eberron', 'greyhawk', 'modern', "tal'dorei"];
+        this.worlds = ['Faerun', 'Eberron', 'Greyhawk', 'Modern', "Tal'Dorei"];
     }
 
 	handleInput(msg) {
@@ -252,6 +251,12 @@ class MultiWorldCalendar {
 	}
 
 	checkInstall() {
+		if (!state.check) {
+			state.check = true;
+			setMWCalDefaults();
+			setAlarmDefaults();
+		}
+
 		if (!state.mwcal) {
 			setMWCalDefaults();
 		}
@@ -349,8 +354,6 @@ function setAlarmDefaults() {
 		modern: [],
 		talDorei: []
 	};
-	
-	mwcal.alarms = [state.alarms.faerun, state.alarms.eberron, state.alarms.greyhawk, state.alarms.modern, state.alarms.talDorei];
 
 	log('Multi-World Calendar - Successfully registered Alarm Defaults!');
 }
@@ -379,18 +382,17 @@ function updOrdinal() {
 }
 
 function setWorld(world) {
-	if (!(mwcal.worlds.includes(world.toLowerCase()))) return sendChat('Multi-World Calendar', 'Invalid World. Please make sure to either use the correct Name!');
+	if (!(mwcal.worlds.find(w => w.toLowerCase() === world.toLowerCase()))) return sendChat('Multi-World Calendar', 'Invalid World. Please make sure to either use the correct Name!');
 
-	mwcal.world = mwcal.worlds.indexOf(world.toLowerCase())
-	log(mwcal.world);
+	mwcal.world = mwcal.worlds.findIndex(w => w.toLowerCase() === world.toLowerCase());
 }
 
 function getSuffix() {
-	const ordinal = state.mwcal[mwcal.world].ord;
+	const day = state.mwcal[mwcal.world].day;
 
-	if (ordinal >= 11 && ordinal <= 13) return 'th';
+	if (day >= 11 && day <= 13) return 'th';
 
-	switch (ordinal % 10) {
+	switch (day % 10) {
 		case 1: return 'st';
 		case 2: return 'nd';
 		case 3: return 'rd';
@@ -406,61 +408,87 @@ function updDate() {
 	switch (world) {
 		case 0:
 			if (Math.ceil(ordinal / 30) <= 1) {
-				month = monthNames[0][0];
+				month = monthNames[world][0];
 				date = ordinal;
 			} else {
-				month = monthNames[0][Math.ceil(ordinal / 30) - 1];
+				month = monthNames[world][Math.ceil(ordinal / 30) - 1];
 				date = ordinal - (Math.ceil(ordinal / 30) - 1) * 30;
 			}
 		break;
 		case 1:
 			if (Math.ceil(ordinal / 28) <= 1) {
-				month = monthNames[1][0];
+				month = monthNames[world][0];
 				date = ordinal;
 			} else {
-				month = monthNames[1][Math.ceil(ordinal / 28) - 1];
+				month = monthNames[world][Math.ceil(ordinal / 28) - 1];
 				date = ordinal - (Math.ceil(ordinal / 28) - 1) * 28;
 			}
 		break;
 		case 2:
 			const grhwkDays = [7, 28, 28, 28, 7, 28, 28, 28, 7, 28, 28, 28, 7, 28, 28, 28];
-			const grhwkDay = grhwkDays[state.mwcal[world].month - 1];
-			if (Math.ceil(ordinal / grhwkDay) <= 1) {
-				month = monthNames[2][0];
+
+			if (ordinal <= 7) {
+				month = monthNames[world][0];
 				date = ordinal;
 			} else {
-				month = monthNames[2][Math.ceil(ordinal / grhwkDay) - 1];
-				date = ordinal - (Math.ceil(ordinal / grhwkDay) - 1) * grhwkDay;
+			    let count = ordinal;
+				for (let i=0; i<grhwkDays.length; i++) {
+				    count -= grhwkDays[i];
+				    
+				    if (count <= 0) {
+				        month = monthNames[world][i];
+				        break;
+				    }
+				}
+				
+				date = ordinal - grhwkDays.slice(0, monthNames[world].findIndex(m => m === month)).reduce((a, b) => a + b, 0);
 			}
 		break;
 		case 3:
 			const modernDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-			const modDay = modernDays[state.mwcal[world].month - 1];
-
-			if (Math.ceil(ordinal / modDay) <= 1) {
-				month = monthNames[3][0];
+			
+			if (ordinal <= 31) {
+				month = monthNames[world][0];
 				date = ordinal;
 			} else {
-				month = monthNames[3][Math.ceil(ordinal / modDay) - 1];
-				date = ordinal - (Math.ceil(ordinal / modDay) - 1) * modDay;
+				let count = ordinal;
+				for (let i=0; i<modernDays.length; i++) {
+				    count -= modernDays[i];
+				    
+				    if (count <= 0) {
+				        month = monthNames[world][i];
+				        break;
+				    }
+				}
+				
+				date = ordinal - modernDays.slice(0, monthNames[world].findIndex(m => m === month)).reduce((a, b) => a + b, 0);
 			}
 		break;
 		case 4:
 			const talDays = [29, 30, 30, 31, 28, 31, 32, 29, 27, 29, 32];
-			const talDay = talDays[state.mwcal[world].month - 1];
-
-			if (Math.ceil(ordinal / talDay) <= 1) {
-				month = monthNames[4][0];
+			
+			if (ordinal <= 29) {
+				month = monthNames[world][0];
 				date = ordinal;
 			} else {
-				month = monthNames[4][Math.ceil(ordinal / talDay) - 1];
-				date = ordinal - (Math.ceil(ordinal / talDay) - 1) * talDay;
+				let count = ordinal;
+				for (let i=0; i<talDays.length; i++) {
+				    count -= talDays[i];
+				    
+				    if (count <= 0) {
+				        month = monthNames[world][i];
+				        break;
+				    }
+				}
+				
+				date = ordinal - talDays.slice(0, monthNames[world].findIndex(m => m === month)).reduce((a, b) => a + b, 0);
 			}
 		break;
 	}
 
-	setMonth(month);
-	setDay(date);
+	state.mwcal[world].month = monthNames[world].indexOf(month) + 1;
+	state.mwcal[world].day = date;
+	updOrdinal();
 }
 
 function setDay(day) {
@@ -610,114 +638,97 @@ function randomizeWeather() {
 	let temp, wind, season, precip;
 	const ordinal = state.mwcal[mwcal.world].ord;
 
-	switch (ordinal) {
-		case ordinal > 325 || ordinal <= 70:
-			season = 'Winter';
-		break;
-		case ordinal <= 165:
-			season = 'Spring';
-		break;
-		case ordinal <= 255:
-			season = 'Summer';
-		break;
-		case ordinal <= 325:
-			season = 'Fall';
-		break;
-	}
+    if (ordinal > 325 || ordinal <= 70) season = 'Winter';
+    else if (ordinal <= 165) season = 'Spring';
+    else if (ordinal <= 255) season = 'Summer';
+    else if (ordinal <= 325) season = 'Fall';
+	
 
 	let rand = randomInteger(21);
 
-	switch (rand) {
-		case rand >= 15 && rand <= 17:
-			wind = 'the wind is blowing strongly ';
+    if (rand >= 15 && rand <= 17) {
+        wind = 'the wind is blowing strongly ';
+        
+        switch (season) {
+			case 'Winter':
+				temp = 'It is a bitterly cold winter day, ';
+			break;
+			case 'Spring':
+				temp = 'It is a cold spring day, ';
+			break;
+			case 'Summer':
+				temp = 'It is a cool summer day, ';
+			break;
+			case 'Fall':
+				temp = 'It is a cold fall day, ';
+			break;
+		}
+    } else if (rand >= 18 && rand <= 20) {
+        wind = 'the wind is blowing gently ';
 
-			switch (season) {
-				case 'Winter':
-					temp = 'It is a bitterly cold winter day, ';
-				break;
-				case 'Spring':
-					temp = 'It is a cold spring day, ';
-				break;
-				case 'Summer':
-					temp = 'It is a cool summer day, ';
-				break;
-				case 'Fall':
-					temp = 'It is a cold fall day, ';
-				break;
-			}
+		switch (season) {
+			case 'Winter':
+				temp = 'It is a mild winter day, ';
 			break;
-		case rand >= 18 && rand <= 20:
-			wind = 'the wind is blowing gently ';
-
-			switch (season) {
-				case 'Winter':
-					temp = 'It is a mild winter day, ';
-				break;
-				case 'Spring':
-					temp = 'It is a hot spring day, ';
-				break;
-				case 'Summer':
-					temp = 'It is a blisteringly hot summer day, ';
-				break;
-				case 'Fall':
-					temp = 'It is a hot fall day, ';
-				break;
-			}
+			case 'Spring':
+				temp = 'It is a hot spring day, ';
 			break;
-		default:
-			wind = 'there is no wind ';
-			switch (season) {
-				case 'Winter':
-					temp = 'It is a cold winter day, ';
-				break;
-				case 'Spring':
-					temp = 'It is a warm spring day, ';
-				break;
-				case 'Summer':
-					temp = 'It is a hot summer day, ';
-				break;
-				case 'Fall':
-					temp = 'It is a cool fall day, ';
-				break;
-			}
+			case 'Summer':
+				temp = 'It is a blisteringly hot summer day, ';
 			break;
-	}
+			case 'Fall':
+				temp = 'It is a hot fall day, ';
+			break;
+		}
+    } else if (rand < 15) {
+        wind = 'there is no wind ';
+		switch (season) {
+			case 'Winter':
+				temp = 'It is a cold winter day, ';
+			break;
+			case 'Spring':
+				temp = 'It is a warm spring day, ';
+			break;
+			case 'Summer':
+				temp = 'It is a hot summer day, ';
+			break;
+			case 'Fall':
+				temp = 'It is a cool fall day, ';
+			break;
+		}
+    }
 
 	rand = randomInteger(21);
-
-	switch (rand) {
-		case rand >= 15 && rand <= 17:
-			switch (season) {
-				case 'Winter':
-					precip = 'and snow falls softly from the sky.';
-				break;
-				default:
-					precip = 'and it is raining lightly.';
-				break;
-			}
+	
+	if (rand <= 15 && rand <= 17) {
+	    switch (season) {
+			case 'Winter':
+				precip = 'and snow falls softly from the sky.';
 			break;
-		case rand >= 18 && rand <= 20:
-			switch (season) {
-				case 'Winter':
-					precip = 'and snow falls heavily from the sky.';
-				break;
-				default:
-					precip = 'and a torrential rain is falling.';
-				break;
-			}
+			default:
+				precip = 'and it is raining lightly.';
 			break;
-		default:
-			switch (randomInteger(2)) {
-				case 1:
-					precip = 'and the sky is clear.';
-				break;
-				default:
-					precip = 'and the sky is overcast.';
-				break;
-			}
+		}
+	} else if (rand >= 18 && rand <= 20) {
+	    switch (season) {
+			case 'Winter':
+				precip = 'and snow falls heavily from the sky.';
 			break;
+			default:
+				precip = 'and a torrential rain is falling.';
+			break;
+		}
+	} else if (rand < 15) {
+	    switch (randomInteger(2)) {
+			case 1:
+				precip = 'and the sky is clear.';
+			break;
+			default:
+				precip = 'and the sky is overcast.';
+			break;
+		}
 	}
-
+	
 	state.mwcal[mwcal.world].weather = `${temp}${wind}${precip}`;
 }
 
@@ -759,8 +770,9 @@ function calendarMenu() {
 								`<tr><td ${mwcal.style.tdReg}>Year: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setyear --?{Year?|${year}}">${year}</a></td></tr>` + //--
 								`<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --settime --hour --?{Hour?|${hour}} --minute --?{Minute?|${minute}}">${hour}:${minute}</a></td></tr>` + //--
 								`<tr><td ${mwcal.style.tdReg}>Moon: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --moon --phase --?{Phase?|${mwcal.moons.join('|')}}">${moon}</a></td></tr>` + //--
-								`<tr><td ${mwcal.style.tdReg}>Weather: </td><td ${mwcal.style.tdReg}>${weather}</td></tr>` + //--
 								`</table>` + //--
+								`<div>Weather: <br>${weather}</div>` + //--
+								`<br><br>` + //--
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --advance --?{Amount?|1} --?{Type?|Short Rest|Long Rest|Minute|Hour|Day|Week|Month|Year}">Advance Time</a></div>` + //--
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --weather --toggle">Toggle Weather Display</a></div>` + //--
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --moon --toggle">Toggle Moon Display</a></div>` + //--
@@ -786,8 +798,10 @@ function calendarMenu() {
 								`<tr><td ${mwcal.style.tdReg}>Year: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setyear --?{Year?|${year}}">${year}</a></td></tr>` + //--
 								`<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --settime --hour --?{Hour?|${hour}} --minute --?{Minute?|${minute}}">${hour}:${minute}</a></td></tr>` + //--
 								`<tr><td ${mwcal.style.tdReg}>Moon: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --moon --phase --?{Phase?|${mwcal.moons.join('|')}} --phase2 --?{Phase?|${mwcal.moons.join('|')}}">${moon}</a></td></tr>` + //--
-								`<tr><td ${mwcal.style.tdReg}>Weather: </td><td ${mwcal.style.tdReg}>${weather}</td></tr>` + //--
+								`<tr><td ${mwcal.style.tdReg}>Weather: </td></tr>` + //--
 								`</table>` + //--
+								`<div>${weather}</div>` + //--
+								`<br><br>` + //--
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --advance --?{Amount?|1} --?{Type?|Short Rest|Long Rest|Minute|Hour|Day|Week|Month|Year}">Advance Time</a></div>` + //--
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --weather --toggle">Toggle Weather Display</a></div>` + //--
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --moon --toggle">Toggle Moon Display</a></div>` + //--
@@ -816,8 +830,10 @@ function calendarMenu() {
 								`<tr><td ${mwcal.style.tdReg}>Month: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setmonth --?{Month?|${months}}">${month}</a></td></tr>` + //--
 								`<tr><td ${mwcal.style.tdReg}>Year: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setyear --?{Year?|${year}}">${year}</a></td></tr>` + //--
 								`<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --settime --hour --?{Hour?|${hour}} --minute --?{Minute?|${minute}}">${hour}:${minute}</a></td></tr>` + //--
-								`<tr><td ${mwcal.style.tdReg}>Weather: </td><td ${mwcal.style.tdReg}>${weather}</td></tr>` + //--
+								`<tr><td ${mwcal.style.tdReg}>Weather: </td></tr>` + //--
 								`</table>` + //--
+								`<div>${weather}</div>` + //--
+								`<br><br>` + //--
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --advance --?{Amount?|1} --?{Type?|Short Rest|Long Rest|Minute|Hour|Day|Week|Month|Year}">Advance Time</a></div>` + //--
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --weather --toggle">Toggle Weather Display</a></div>` + //--
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --moon --toggle">Toggle Moon Display</a></div>` + //--
@@ -841,8 +857,10 @@ function calendarMenu() {
 								`<tr><td ${mwcal.style.tdReg}>Month: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setmonth --?{Month?|${months}}">${month}</a></td></tr>` + //--
 								`<tr><td ${mwcal.style.tdReg}>Year: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setyear --?{Year?|${year}}">${year}</a></td></tr>` + //--
 								`<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --settime --hour --?{Hour?|${hour}} --minute --?{Minute?|${minute}}">${hour}:${minute}</a></td></tr>` + //--
-								`<tr><td ${mwcal.style.tdReg}>Weather: </td><td ${mwcal.style.tdReg}>${weather}</td></tr>` + //--
+								`<tr><td ${mwcal.style.tdReg}>Weather: </td></tr>` + //--
 								`</table>` + //--
+								`<div>${weather}</div>` + //--
+								`<br><br>` + //--
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --advance --?{Amount?|1} --?{Type?|Short Rest|Long Rest|Minute|Hour|Day|Week|Month|Year}">Advance Time</a></div>` + //--
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --weather --toggle">Toggle Weather Display</a></div>` + //--
 								`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --moon --toggle">Toggle Moon Display</a></div>` + //--
@@ -1162,12 +1180,10 @@ function advance(amount, type) {
 }
 
 function alarmMenu(num) {
-	const alarm = state.alarms[mwcal.world][num];
-	const list = [];
-	const len = state.alarms[mwcal.world].length;
-
-	if (!alarm) {
-		if (!len || len === 0) {
+    const list = [];
+    
+    if (isNaN(num)) {
+        if (!state.alarms[mwcal.world]) {
 			sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
 				`<div ${mwcal.style.header}>Alarm Menu</div>` + //--
 				`<div ${mwcal.style.arrow}></div>` + //--
@@ -1178,7 +1194,7 @@ function alarmMenu(num) {
 				`</div>`
 			);
 		} else {
-			for (let i=0; i<len; i++) {
+			for (let i=0; i<state.alarms[mwcal.world].length; i++) {
 				list.push(i);
 			}
 
@@ -1196,38 +1212,72 @@ function alarmMenu(num) {
 				`</div>`
 			);
 		}
-	} else {
-		for (let i=0; i<len; i++) {
-			list.push(i);
-		}
-
-		const alarmList = list.join('|');
-
-		const title = alarm.title;
-		const date = `${alarm.day}.${alarm.month}.${alarm.year}`;
-		const time = `${alarm.hour}:${alarm.minute}`;
-		const splitDate = date.split('.');
-		const splitTime = time.split(':');
-		const message = alarm.message;
-
-		sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
-			`<div ${mwcal.style.header}>Alarm Menu</div>` + //--
-			`<div ${mwcal.style.arrow}></div>` + //--
-			`<table>` + //--
-			`<tr><td ${mwcal.style.tdReg}>Alarm: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --?{Alarm?|${alarmList}}">${title}</a></td></tr>` + //--
-			`<tr><td ${mwcal.style.tdReg}>Title: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --settitle --?{Title?|Insert Title}">${title}</td></tr>` + //--
-			`<tr><td ${mwcal.style.tdReg}>Date: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --setdate --?{Day?|${splitDate[0]}}.?{Month?|${splitDate[1]}}.?{Year?|${splitDate[2]}}">${date}</td></tr>` + //--
-			`<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --settime --?{Hour?|${splitTime[0]}}:?{Minute?|${splitTime[1]}}">${time}</td></tr>` + //--
-			`<tr><td ${mwcal.style.tdReg}>Message: </td><td ${mwcal.style.tdReg}>${message}</td></tr>` + //--
-			`</table>` + //--
-			`<br><br>` + //--
-			`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --${num} --setmessage --?{Message?|Insert Message}">Set Message</a></div>` + //--
-			`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message}">Create Alarm</a></div>` + //--
-			`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --${num} --delete">Delete Alarm</a></div>` + //--
-			`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal">Open Calendar</a></div>` + //--
-			`</div>`
-		);
-	}
+    } else {
+        const alarm = state.alarms[mwcal.world][num];
+        
+        if (!alarm) {
+    		if (!state.alarms[mwcal.world]) {
+    			sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
+    				`<div ${mwcal.style.header}>Alarm Menu</div>` + //--
+    				`<div ${mwcal.style.arrow}></div>` + //--
+    				`<div ${mwcal.style.divButton}>No Alarms set</div>` + //--
+    				`<br><br>` + //--
+    				`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message}">Create Alarm</a></div>` + //--
+    				`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal">Open Calendar</a></div>` + //--
+    				`</div>`
+    			);
+    		} else {
+    			for (let i=0; i<state.alarms[mwcal.world].length; i++) {
+    				list.push(i);
+    			}
+    
+    			const alarmList = list.join('|');
+    
+    			sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
+    				`<div ${mwcal.style.header}>Alarm Menu</div>` + //--
+    				`<div ${mwcal.style.arrow}></div>` + //--
+    				`<table>` + //--
+    				`<tr><td ${mwcal.style.tdReg}>Alarm: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --?{Alarm?|${alarmList}}">Not selected</a></td></tr>` + //--
+    				`</table>` + //--
+    				`<br><br>` + //--
+    				`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message}">Create Alarm</a></div>` + //--
+    				`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal">Open Calendar</a></div>` + //--
+    				`</div>`
+    			);
+    		}
+    	} else {
+    		for (let i=0; i<state.alarms[mwcal.world].length; i++) {
+    			list.push(i);
+    		}
+    
+    		const alarmList = list.join('|');
+    
+    		const title = alarm.title;
+    		const date = `${alarm.day}.${alarm.month}.${alarm.year}`;
+    		const time = `${alarm.hour}:${alarm.minute}`;
+    		const splitDate = date.split('.');
+    		const splitTime = time.split(':');
+    		const message = alarm.message;
+    
+    		sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
+    			`<div ${mwcal.style.header}>Alarm Menu</div>` + //--
+    			`<div ${mwcal.style.arrow}></div>` + //--
+    			`<table>` + //--
+    			`<tr><td ${mwcal.style.tdReg}>Alarm: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --?{Alarm?|${alarmList}}">${title}</a></td></tr>` + //--
+    			`<tr><td ${mwcal.style.tdReg}>Title: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --settitle --?{Title?|Insert Title}">${title}</td></tr>` + //--
+    			`<tr><td ${mwcal.style.tdReg}>Date: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --setdate --?{Day?|${splitDate[0]}}.?{Month?|${splitDate[1]}}.?{Year?|${splitDate[2]}}">${date}</td></tr>` + //--
+    			`<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --settime --?{Hour?|${splitTime[0]}}:?{Minute?|${splitTime[1]}}">${time}</td></tr>` + //--
+    			`<tr><td ${mwcal.style.tdReg}>Message: </td><td ${mwcal.style.tdReg}>${message}</td></tr>` + //--
+    			`</table>` + //--
+    			`<br><br>` + //--
+    			`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --${num} --setmessage --?{Message?|Insert Message}">Set Message</a></div>` + //--
+    			`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message}">Create Alarm</a></div>` + //--
+    			`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --${num} --delete">Delete Alarm</a></div>` + //--
+    			`<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal">Open Calendar</a></div>` + //--
+    			`</div>`
+    		);
+    	}
+    }
 }
 
 function createAlarm(title, date, time, message) {
