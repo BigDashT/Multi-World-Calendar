@@ -9,7 +9,8 @@ Make sure to always check for the latest version in the releases here on GitHub.
 | Version | Supported          |
 | ------- | ------------------ |
 | 1.0     | :x: |
-| 1.1     | :white_check_mark: |
+| 1.1     | :x: |
+| 1.2     | :white_check_mark: |
 
 ## Reporting an Issue
 
