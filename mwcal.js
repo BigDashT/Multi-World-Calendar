@@ -256,6 +256,16 @@ class MultiWorldCalendar {
                                 case 'setmessage':
                                     setMessage(num, args[3]);
                                 break;
+                                case 'setpause':
+                                    const pause = args[3] === 'Yes';
+                                    state.alarms[mwcal.world][num].pauseOnTrigger = pause;
+                                    sendChat('Multi-World Calendar', `/w gm Alarm #${num} pause on trigger set to ${pause ? 'Yes' : 'No'}`);
+                                break;
+                                case 'setwhisper':
+                                    const whisper = args[3] === 'Yes';
+                                    state.alarms[mwcal.world][num].whisperToGM = whisper;
+                                    sendChat('Multi-World Calendar', `/w gm Alarm #${num} whisper to GM set to ${whisper ? 'Yes' : 'No'}`);
+                                break;
                             }
 
                             alarmMenu(num);
@@ -975,92 +985,161 @@ function showCalendar() {
     }
 }
 
+function compareDates(aY, aM, aD, aH = 0, aMin = 0, bY, bM, bD, bH = 0, bMin = 0) {
+  if (aY !== bY) return aY - bY;
+  if (aM !== bM) return aM - bM;
+  if (aD !== bD) return aD - bD;
+  if (aH !== bH) return aH - bH;
+  return aMin - bMin;
+}
+
 function advance(amount, type) {
-    let world = mwcal.world;
-    let ordinal = state.mwcal[world].ord;
-    let month = state.mwcal[world].month;
-    let year = state.mwcal[world].year;
-    let hour = state.mwcal[world].hour;
-    let minute = state.mwcal[world].minute;
+  let world = mwcal.world;
+  let currentState = {
+    year: state.mwcal[world].year,
+    month: state.mwcal[world].month,
+    day: state.mwcal[world].day,
+    ord: state.mwcal[world].ord,
+    hour: state.mwcal[world].hour,
+    minute: state.mwcal[world].minute
+  };
 
-    switch (type.toLowerCase()) {
-        case 'short rest':
-            hour += amount;
-        break;
-        case 'long rest':
-            hour += amount * 8;
-        break;
-        case 'minute':
-            minute += amount;
-        break;
-        case 'hour':
-            hour += amount;
-        break;
-        case 'day':
-            ordinal += amount;
-        break;
-        case 'week':
-            ordinal += amount * 7;
-        break;
-        case 'month':
-            for (let k = 0; k < amount; k++) {
-                month++;
-                if (month > monthNames[world].length) {
-                    month = 1;
-                    year++;
-                }
-            }
-            state.mwcal[world].month = month;
-            state.mwcal[world].year = year;
-            clampDay();
-            updOrdinal();
-            return; // Exit early since month advance doesn't affect ordinal directly
-        case 'year':
-            year += amount;
-            state.mwcal[world].year = year;
-            clampDay();
-            updOrdinal();
-            return; // Exit early
+  // Compute target by cloning and applying advance
+  let targetState = {...currentState};
+  let tOrdinal = targetState.ord;
+  let tMonth = targetState.month;
+  let tYear = targetState.year;
+  let tHour = targetState.hour;
+  let tMinute = targetState.minute;
+
+  switch (type.toLowerCase()) {
+    case 'short rest':
+      tHour += amount;
+      break;
+    case 'long rest':
+      tHour += amount * 8;
+      break;
+    case 'minute':
+      tMinute += amount;
+      break;
+    case 'hour':
+      tHour += amount;
+      break;
+    case 'day':
+      tOrdinal += amount;
+      break;
+    case 'week':
+      tOrdinal += amount * 7;
+      break;
+    case 'month':
+      for (let k = 0; k < amount; k++) {
+        tMonth++;
+        if (tMonth > monthNames[world].length) {
+          tMonth = 1;
+          tYear++;
+        }
+      }
+      let maxDay = getDaysInMonth(world, tMonth, tYear);
+      if (targetState.day > maxDay) targetState.day = maxDay;
+      let sum = 0;
+      for (let m = 1; m < tMonth; m++) {
+        sum += getDaysInMonth(world, m, tYear);
+      }
+      tOrdinal = sum + targetState.day;
+      break;
+    case 'year':
+      tYear += amount;
+      let maxD = getDaysInMonth(world, tMonth, tYear);
+      if (targetState.day > maxD) targetState.day = maxD;
+      sum = 0;
+      for (let m = 1; m < tMonth; m++) {
+        sum += getDaysInMonth(world, m, tYear);
+      }
+      tOrdinal = sum + targetState.day;
+      break;
+  }
+
+  // Normalize target time
+  while (tMinute >= 60) {
+    tHour++;
+    tMinute -= 60;
+  }
+  while (tHour >= 24) {
+    tOrdinal++;
+    tHour -= 24;
+  }
+  // Normalize target ordinal
+  while (tOrdinal > daysInYear(world, tYear)) {
+    tOrdinal -= daysInYear(world, tYear);
+    tYear++;
+  }
+
+  // Update target month/day from tOrdinal
+  let tRemaining = tOrdinal;
+  let tM = 1;
+  while (tRemaining > getDaysInMonth(world, tM, tYear)) {
+    tRemaining -= getDaysInMonth(world, tM, tYear);
+    tM++;
+  }
+  targetState.month = tM;
+  targetState.day = tRemaining;
+  targetState.year = tYear;
+  targetState.hour = tHour;
+  targetState.minute = tMinute;
+  targetState.ord = tOrdinal;
+
+  // Find pause alarms in between current and target
+  let pauseAlarms = [];
+  state.alarms[world].forEach((alarm, index) => {
+    if (alarm.pauseOnTrigger) {
+      let aHour = alarm.hour !== undefined ? alarm.hour : 0;
+      let aMinute = alarm.minute !== undefined ? alarm.minute : 0;
+      if (compareDates(currentState.year, currentState.month, currentState.day, currentState.hour, currentState.minute, alarm.year, alarm.month, alarm.day, aHour, aMinute) < 0 &&
+          compareDates(targetState.year, targetState.month, targetState.day, targetState.hour, targetState.minute, alarm.year, alarm.month, alarm.day, aHour, aMinute) >= 0) {
+        pauseAlarms.push({alarm, index, hour: aHour, minute: aMinute});
+      }
     }
+  });
 
-    while (minute >= 60) {
-        hour++;
-        minute -= 60;
-    }
+  if (pauseAlarms.length > 0) {
+    // Sort by date/time to find earliest
+    pauseAlarms.sort((a, b) => compareDates(a.alarm.year, a.alarm.month, a.alarm.day, a.hour, a.minute, b.alarm.year, b.alarm.month, b.alarm.day, b.hour, b.minute));
+    const earliest = pauseAlarms[0].alarm;
+    const eHour = pauseAlarms[0].hour;
+    const eMinute = pauseAlarms[0].minute;
 
-    while (hour >= 24) {
-        ordinal++;
-        hour -= 24;
-    }
-
-    // Wrap ordinal across years
-    while (ordinal > daysInYear(world, year)) {
-        ordinal -= daysInYear(world, year);
-        year++;
-    }
-
-    state.mwcal[world].ord = ordinal;
-    state.mwcal[world].year = year;
-    setHour(hour);
-    setMinute(minute);
+    // Set state to earliest pause alarm's date/time
+    state.mwcal[world].year = earliest.year;
+    state.mwcal[world].month = earliest.month;
+    state.mwcal[world].day = earliest.day;
+    state.mwcal[world].hour = eHour;
+    state.mwcal[world].minute = eMinute;
+    updOrdinal();
     updDate();
+    sendChat('Multi-World Calendar', '/w gm Advance stopped at alarm time due to pause option. Run advance again to continue.');
+  } else {
+    // Apply full target
+    state.mwcal[world].year = targetState.year;
+    state.mwcal[world].month = targetState.month;
+    state.mwcal[world].day = targetState.day;
+    state.mwcal[world].hour = targetState.hour;
+    state.mwcal[world].minute = targetState.minute;
+    state.mwcal[world].ord = targetState.ord;
+    updDate();
+  }
 }
 
 function isPastOrPresent(alarm) {
   const c = state.mwcal[mwcal.world];
   if (alarm.year < c.year) return true;
   if (alarm.year > c.year) return false;
-  // years equal
   if (alarm.month < c.month) return true;
   if (alarm.month > c.month) return false;
-  // months equal
   if (alarm.day < c.day) return true;
   if (alarm.day > c.day) return false;
-  // days equal
-  if (alarm.hour === undefined) return true; // date-only alarm triggers on the day
+  if (alarm.hour === undefined) return true;
   if (alarm.hour < c.hour) return true;
   if (alarm.hour > c.hour) return false;
-  // hours equal
   if (alarm.minute <= c.minute) return true;
   return false;
 }
@@ -1149,19 +1228,22 @@ function alarmMenu(num) {
             const splitDate = date.split('.');
             const splitTime = time.split(':');
             const message = alarm.message;
+            const pause = alarm.pauseOnTrigger ? 'Yes' : 'No';
+            const whisper = alarm.whisperToGM ? 'Yes' : 'No';
     
             sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
                 `<div ${mwcal.style.header}>Alarm Menu</div>` + //--
                 `<div ${mwcal.style.arrow}></div>` + //--
                 `<table>` + //--
                 `<tr><td ${mwcal.style.tdReg}>Alarm: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --?{Alarm?|${alarmList}}">${title}</a></td></tr>` + //--
-                `<tr><td ${mwcal.style.tdReg}>Title: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --settitle --?{Title?|Insert Title}">${title}</td></tr>` + //--
-                `<tr><td ${mwcal.style.tdReg}>Date: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --setdate --?{Day?|${splitDate[0]}}.?{Month?|${splitDate[1]}}.?{Year?|${splitDate[2]}}">${date}</td></tr>` + //--
-                `<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --settime --?{Hour?|${splitTime[0]}}:?{Minute?|${splitTime[1]}}">${time}</td></tr>` + //--
-                `<tr><td ${mwcal.style.tdReg}>Message: </td><td ${mwcal.style.tdReg}>${message}</td></tr>` + //--
+                `<tr><td ${mwcal.style.tdReg}>Title: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --settitle --?{Title?|${title}}">${title}</a></td></tr>` + //--
+                `<tr><td ${mwcal.style.tdReg}>Date: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --setdate --?{Date|${date}}">${date}</a></td></tr>` + //--
+                `<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --settime --?{Time|${time}}">${time}</a></td></tr>` + //--
+                `<tr><td ${mwcal.style.tdReg}>Message: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --setmessage --?{Message?|${message}}">${message}</a></td></tr>` + //--
+                `<tr><td ${mwcal.style.tdReg}>Pause on Trigger: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --setpause --?{Pause on trigger?|Yes|No}">${pause}</a></td></tr>` + //--
+                `<tr><td ${mwcal.style.tdReg}>Whisper to GM: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --setwhisper --?{Whisper to GM?|Yes|No}">${whisper}</a></td></tr>` + //--
                 `</table>` + //--
                 `<br><br>` + //--
-                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --${num} --setmessage --?{Message?|Insert Message}">Set Message</a></div>` + //--
                 `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message}">Create Alarm</a></div>` + //--
                 `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --delete --${num}">Delete Alarm</a></div>` + //--
                 `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal">Open Calendar</a></div>` + //--
@@ -1200,7 +1282,9 @@ function createAlarm(title, dateStr, timeStr, message) {
         year: year,
         hour: hour,
         minute: minute,
-        message: message
+        message: message,
+        pauseOnTrigger: false,
+        whisperToGM: false
     };
 
     state.alarms[mwcal.world].push(alarm);
@@ -1276,12 +1360,15 @@ function chkAlarms() {
     alarms.forEach((alarm, index) => {
         if (isPastOrPresent(alarm)) {
             const timeStr = alarm.hour !== undefined ? `${alarm.hour}:${alarm.minute}` : 'No time set';
-            sendChat('Multi-World Calendar', `/w gm Alarm #${index} triggered!\n` +
-                `Title: ${alarm.title}\n` +
-                `Date: ${alarm.day}.${alarm.month}.${alarm.year}\n` +
-                `Time: ${timeStr}\n` +
-                `Message: ${alarm.message}`
-            );
+            const alarmMsg = `<div ${mwcal.style.divMenu}>` +
+                `<div ${mwcal.style.header}>Alarm Triggered #${index}</div>` +
+                `<div ${mwcal.style.arrow}></div>` +
+                `Title: ${alarm.title}<br>` +
+                `Date: ${alarm.day}.${alarm.month}.${alarm.year}<br>` +
+                `Time: ${timeStr}<br>` +
+                `Message: ${alarm.message}` +
+                `</div>`;
+            sendChat('Multi-World Calendar', alarm.whisperToGM ? `/w gm ${alarmMsg}` : alarmMsg);
             toDelete.push(index);
         }
     });
