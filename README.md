@@ -1,8 +1,8 @@
 # Big-T's Multiworld Calendar and Weather System!
 #### Or BMCWS for short!
-A Multi-World Multi-Setting Calendar, Moon Phase Tracker and Weather Generator for Roll20
+A Multi-World Multi-Setting Calendar, Moon Phase Tracker and Weather Generator for Roll20!
 
-Originaly made by [Kirsty](https://app.roll20.net/users/1165285/kirsty) and [Julexar](https://github.com/Julexar/)
+Originaly made by [Kirsty](https://app.roll20.net/users/1165285/kirsty) and [Julexar](https://github.com/Julexar/).
 
 (Note: Mention of the names of original contributors/maintainers/creators does not imply endorsement by the named individuals/entities)
 
@@ -10,7 +10,7 @@ I forked this calendar from the original maintainer (Julexar) because it had bee
 
 Contributions UP TO [this commit](https://github.com/BigDashT/Multi-World-Calendar/commit/47782072bb45917237f29fd70875ed5a2177346d) are licensed under [BSD-3](https://github.com/BigDashT/Multi-World-Calendar?tab=BSD-3-Clause-2-ov-file), contributions starting at and following [this commit](https://github.com/BigDashT/Multi-World-Calendar/commit/12049d88dbf8afefa91777ef87fdca6e49716e8e) are licensed under [GNU AGPL 3.0](https://github.com/BigDashT/Multi-World-Calendar/blob/master/LICENSE), please note that distributions or forks may be required to include both licenses!
 
-For a Guide, please see [here](https://github.com/Julexar/Multi-World-Calendar/wiki/How-to-use)
+For a Guide, please see [here](https://github.com/BigDashT/Multi-World-Calendar/wiki).
 
 ## Features
 * Time and Date tracking for Eberron, Faerun, Greyhawk, Tal'Dorei and Modern (Gregorian) Calendars! Accurate dates and times for many different campaign settings with leap year functionality included!
