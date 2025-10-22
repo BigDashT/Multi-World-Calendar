@@ -7,6 +7,8 @@ Originaly made by [Kirsty](https://app.roll20.net/users/1165285/kirsty) and [Jul
 
 Contributions UP TO [this commit](https://github.com/BigDashT/Multi-World-Calendar/commit/47782072bb45917237f29fd70875ed5a2177346d) are licensed under [BSD-3](https://github.com/BigDashT/Multi-World-Calendar?tab=BSD-3-Clause-2-ov-file), contributions starting at and following [this commit](https://github.com/BigDashT/Multi-World-Calendar/commit/12049d88dbf8afefa91777ef87fdca6e49716e8e) are licensed under [GNU AGPL 3.0](https://github.com/BigDashT/Multi-World-Calendar/blob/master/LICENSE), please note that distributions or forks may be required to include both licenses!
 
+For a Guide, please see [here](https://github.com/Julexar/Multi-World-Calendar/wiki/How-to-use)
+
 ## Features
 * Time and Date tracking for Eberron, Faerun, Greyhawk, Tal'Dorei and Modern (Gregorian) Calendars! Accurate dates and times for many different campaign settings with leap year functionality included!
 * Randomised or DM Set Weather! Weather changes daily or can be set by the DM if a specific weather is required for the story!
@@ -23,5 +25,3 @@ Contributions UP TO [this commit](https://github.com/BigDashT/Multi-World-Calend
 ## Known Issues
 * Setting lunar cycles manually is currently broken
 * Some manually set weather may return invalid placeholder text
-
-For a Guide, please see [here](https://github.com/Julexar/Multi-World-Calendar/wiki/How-to-use)
