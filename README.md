@@ -1,6 +1,6 @@
 # Big-T's Multiworld Calendar and Weather System!
 #### Or BMCWS for short!
-A Multi-World Calendar and Weather Generator for Roll20
+A Multi-World Multi-Setting Calendar, Moon Phase Tracker and Weather Generator for Roll20
 
 Originaly made by [Kirsty](https://app.roll20.net/users/1165285/kirsty) and [Julexar](https://github.com/Julexar/)
 
