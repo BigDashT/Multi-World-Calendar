@@ -14,13 +14,13 @@ Contributions UP TO [this commit](https://github.com/BigDashT/Multi-World-Calend
 * Accurate time advanacement! Advance time by anywhere from 1 minute to 100 years with a single click! Or advance time by long or short rests!
 * Alarms! Set alarms for specific time and dates to keep track of key events, effect durations or story movements, you can hide alarms from players or show them if they need a reminder! Time advancements can be set to automatically stop when an alarm is activated to avoid skipping past!
 
-### Planned Features
+## Planned Features
 * Display of seasons and seasonal weather variations!
 * Temperature readouts!
 * More weather options!
 * Configurable "climate" system for weather so that theres no more snowing in the desert!
 
-#### Known Issues
+## Known Issues
 * Setting lunar cycles manually is currently broken
 * Some manually set weather may return invalid placeholder text
 
