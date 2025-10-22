@@ -2,6 +2,7 @@
 Calendar for Eberron, Faerun, Greyhawk, Modern and Tal'Dorei Settings
 Original by Kirsty (https://app.roll20.net/users/1165285/kirsty)
 Rewritten by Julexar (https://app.roll20.net/users/9989180/julexar)
+Rewritten again by Big-T (https://github.com/BigDashT/)
 
 GM Commands:
 !mwcal
@@ -132,13 +133,15 @@ class MultiWorldCalendar {
     }
 
     handleInput(msg) {
-        const args = msg.content.split(/\s+--/);
+        const rawArgs = msg.content.split('--');
+        const args = rawArgs.map(s => s.trim()).filter(s => s);
+        args[0] = args[0].replace('!', '');
 
         if (msg.type !== 'api') return;
 
         if (playerIsGM(msg.playerid)) {
             switch (args[0]) {
-                case '!mwcal':
+                case 'mwcal':
                     switch (args[1]) {
                         default:
                             chkAlarms();
@@ -207,12 +210,42 @@ class MultiWorldCalendar {
                                 toggleMoon();
                                 calendarMenu();
                             } else {
-                                const phase = args[2];
-                                const phase2 = args[4];
+                                const phase = args[3];
+                                const phase2 = args[5];
 
                                 updMoon(phase, phase2);
                                 calendarMenu();
                             }
+                        break;
+                        case 'setweather':
+                            const temp = args[3];
+                            const wind = args[5];
+                            const direction = args[7] || '';
+                            const weatherType = args[9];
+                            let precip = '';
+                            switch (weatherType) {
+                                case 'Clear':
+                                    precip = 'and the sky is clear.';
+                                    break;
+                                case 'Overcast':
+                                    precip = 'and the sky is overcast.';
+                                    break;
+                                case 'Rain':
+                                    precip = 'and it is raining lightly.';
+                                    break;
+                                case 'Thunderstorm':
+                                    precip = 'and a thunderstorm is raging.';
+                                    break;
+                                case 'Snow':
+                                    precip = 'and snow falls softly from the sky.';
+                                    break;
+                            }
+                            let fullWind = wind;
+                            if (wind !== 'there is no wind' && direction !== 'None') {
+                                fullWind += ' from the ' + direction;
+                            }
+                            state.mwcal[mwcal.world].weather = `${temp}, ${fullWind} ${precip}`.trim();
+                            calendarMenu();
                         break;
                         case 'world':
                             if (!args[2] || !mwcal.worlds.find(w => w.toLowerCase() === args[2].toLowerCase())) return sendChat('Multi-World Calendar', '/w gm Invalid World! Please input a valid world.');
@@ -230,10 +263,10 @@ class MultiWorldCalendar {
                         break;
                     }
                 break;
-                case '!month':
+                case 'month':
                     setMonthName(args[1], args[2]);
                 break;
-                case '!alarm':
+                case 'alarm':
                     switch (args[1]) {
                         case undefined:
                             alarmMenu();
@@ -277,7 +310,7 @@ class MultiWorldCalendar {
                             let time = args[7] ? args[7].split(':') : null;
                             if (time && (isNaN(parseInt(time[0])) || isNaN(parseInt(time[1])))) return sendChat('Multi-World Calendar', '/w gm Invalid Syntax! The Time must be formatted correctly and must contain numbers!');
                             
-                            createAlarm(args[3], args[5], args[7], args[9]);
+                            createAlarm(args[3], args[5], args[7], args[9], args[11], args[13]);
                         break;
                         case 'delete':
                             deleteAlarm(args[2]);
@@ -292,7 +325,7 @@ class MultiWorldCalendar {
                 break;
             }
         } else {
-            if (args[0] === '!mwcal') {
+            if (args[0] === 'mwcal') {
                 showCalendar();
             }
         }
@@ -625,63 +658,63 @@ function randomizeWeather() {
     else if (ordinal <= 325) season = 'Fall';
     
 
-    let rand = randomInteger(21);
+    let rand = randomInteger(20);
 
     if (rand >= 15 && rand <= 17) {
-        wind = 'the wind is blowing strongly ';
+        wind = 'the wind is blowing strongly';
         
         switch (season) {
             case 'Winter':
-                temp = 'It is a bitterly cold winter day, ';
+                temp = 'It is a bitterly cold winter day';
             break;
             case 'Spring':
-                temp = 'It is a cold spring day, ';
+                temp = 'It is a cold spring day';
             break;
             case 'Summer':
-                temp = 'It is a cool summer day, ';
+                temp = 'It is a cool summer day';
             break;
             case 'Fall':
-                temp = 'It is a cold fall day, ';
+                temp = 'It is a cold fall day';
             break;
         }
     } else if (rand >= 18 && rand <= 20) {
-        wind = 'the wind is blowing gently ';
+        wind = 'the wind is blowing gently';
 
         switch (season) {
             case 'Winter':
-                temp = 'It is a mild winter day, ';
+                temp = 'It is a mild winter day';
             break;
             case 'Spring':
-                temp = 'It is a hot spring day, ';
+                temp = 'It is a hot spring day';
             break;
             case 'Summer':
-                temp = 'It is a blisteringly hot summer day, ';
+                temp = 'It is a blisteringly hot summer day';
             break;
             case 'Fall':
-                temp = 'It is a hot fall day, ';
+                temp = 'It is a hot fall day';
             break;
         }
-    } else if (rand < 15) {
-        wind = 'there is no wind ';
+    } else {
+        wind = 'there is no wind';
         switch (season) {
             case 'Winter':
-                temp = 'It is a cold winter day, ';
+                temp = 'It is a cold winter day';
             break;
             case 'Spring':
-                temp = 'It is a warm spring day, ';
+                temp = 'It is a warm spring day';
             break;
             case 'Summer':
-                temp = 'It is a hot summer day, ';
+                temp = 'It is a hot summer day';
             break;
             case 'Fall':
-                temp = 'It is a cool fall day, ';
+                temp = 'It is a cool fall day';
             break;
         }
     }
 
-    rand = randomInteger(21);
+    rand = randomInteger(20);
     
-    if (rand <= 15 && rand <= 17) {
+    if (rand >= 15 && rand <= 17) {
         switch (season) {
             case 'Winter':
                 precip = 'and snow falls softly from the sky.';
@@ -699,7 +732,7 @@ function randomizeWeather() {
                 precip = 'and a torrential rain is falling.';
             break;
         }
-    } else if (rand < 15) {
+    } else {
         switch (randomInteger(2)) {
             case 1:
                 precip = 'and the sky is clear.';
@@ -710,7 +743,7 @@ function randomizeWeather() {
         }
     }
     
-    state.mwcal[mwcal.world].weather = `${temp}${wind}${precip}`;
+    state.mwcal[mwcal.world].weather = `${temp}, ${wind} ${precip}`;
 }
 
 function toggleWeather() {
@@ -758,126 +791,7 @@ function calendarMenu() {
                                 `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --weather --toggle">Toggle Weather Display</a></div>` + //--
                                 `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --moon --toggle">Toggle Moon Display</a></div>` + //--
                                 `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --weather">Randomize Weather</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --moon">Randomize Moon Phase</a></div>` + //--
-                                `<br>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm">Open Alarm Menu</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --show">Show to Players</a></div>` + //--
-                                `<br><br>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --reset">Reset Calendar</a></div>` + //--
-                                `</div>`
-                            );
-                        break;
-                        case 1:
-                            sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
-                                `<div ${mwcal.style.header}>Multi-World Calendar</div>` + //--
-                                `<div ${mwcal.style.sub}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
-                                `<div ${mwcal.style.arrow}></div>` + //--
-                                `<table>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>World: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --world --?{World?|${mwcal.worlds.join('|')}}">${state.mwcal[mwcal.world].name}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Day: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setday --?{Day?|${day}}">${day}${suffix}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Month: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setmonth --?{Month?|${months}}">${month}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Year: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setyear --?{Year?|${year}}">${year}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --settime --hour --?{Hour?|${hour}} --minute --?{Minute?|${minute}}">${hour}:${minute}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Moon: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --moon --phase --?{Phase?|${mwcal.moons.join('|')}} --phase2 --?{Phase?|${mwcal.moons.join('|')}}">${moon}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Weather: </td></tr>` + //--
-                                `</table>` + //--
-                                `<div>${weather}</div>` + //--
-                                `<br><br>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --advance --?{Amount?|1} --?{Type?|Short Rest|Long Rest|Minute|Hour|Day|Week|Month|Year}">Advance Time</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --weather --toggle">Toggle Weather Display</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --moon --toggle">Toggle Moon Display</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --weather">Randomize Weather</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --moon">Randomize Moon Phase</a></div>` + //--
-                                `<br>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm">Open Alarm Menu</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --show">Show to Players</a></div>` + //--
-                                `<br><br>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --reset">Reset Calendar</a></div>` + //--
-                                `</div>`
-                            );
-                        break;
-                    }
-                break;
-                case null:
-                    switch (mwcal.world) {
-                        default:
-                            sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
-                                `<div ${mwcal.style.header}>Multi-World Calendar</div>` + //--
-                                `<div ${mwcal.style.sub}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
-                                `<div ${mwcal.style.arrow}></div>` + //--
-                                `<table>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>World: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --world --?{World?|${mwcal.worlds.join('|')}}">${state.mwcal[mwcal.world].name}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Day: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setday --?{Day?|${day}}">${day}${suffix}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Month: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setmonth --?{Month?|${months}}">${month}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Year: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setyear --?{Year?|${year}}">${year}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --settime --hour --?{Hour?|${hour}} --minute --?{Minute?|${minute}}">${hour}:${minute}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Weather: </td></tr>` + //--
-                                `</table>` + //--
-                                `<div>${weather}</div>` + //--
-                                `<br><br>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --advance --?{Amount?|1} --?{Type?|Short Rest|Long Rest|Minute|Hour|Day|Week|Month|Year}">Advance Time</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --weather --toggle">Toggle Weather Display</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --moon --toggle">Toggle Moon Display</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --weather">Randomize Weather</a></div>` + //--
-                                `<br>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm">Open Alarm Menu</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --show">Show to Players</a></div>` + //--
-                                `<br><br>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --reset">Reset Calendar</a></div>` + //--
-                                `</div>`
-                            );
-                        break;
-                        case 1:
-                            sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
-                                `<div ${mwcal.style.header}>Multi-World Calendar</div>` + //--
-                                `<div ${mwcal.style.sub}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
-                                `<div ${mwcal.style.arrow}></div>` + //--
-                                `<table>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>World: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --world --?{World?|${mwcal.worlds.join('|')}}">${state.mwcal[mwcal.world].name}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Day: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setday --?{Day?|${day}}">${day}${suffix}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Month: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setmonth --?{Month?|${months}}">${month}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Year: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setyear --?{Year?|${year}}">${year}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --settime --hour --?{Hour?|${hour}} --minute --?{Minute?|${minute}}">${hour}:${minute}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Weather: </td></tr>` + //--
-                                `</table>` + //--
-                                `<div>${weather}</div>` + //--
-                                `<br><br>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --advance --?{Amount?|1} --?{Type?|Short Rest|Long Rest|Minute|Hour|Day|Week|Month|Year}">Advance Time</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --weather --toggle">Toggle Weather Display</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --moon --toggle">Toggle Moon Display</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --weather">Randomize Weather</a></div>` + //--
-                                `<br>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm">Open Alarm Menu</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --show">Show to Players</a></div>` + //--
-                                `<br><br>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --reset">Reset Calendar</a></div>` + //--
-                                `</div>`
-                            );
-                        break;
-                    }
-                break;
-            }
-        break;
-        case null:
-            switch (moon) {
-                default:
-                    switch (mwcal.world) {
-                        default:
-                            sendChat('Multi-World Calendar', `/w gm <div ${mwcal.style.divMenu}>` + //--
-                                `<div ${mwcal.style.header}>Multi-World Calendar</div>` + //--
-                                `<div ${mwcal.style.sub}>${state.mwcal[mwcal.world].name} Calendar</div>` + //--
-                                `<div ${mwcal.style.arrow}></div>` + //--
-                                `<table>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>World: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --world --?{World?|${mwcal.worlds.join('|')}}">${state.mwcal[mwcal.world].name}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Day: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setday --?{Day?|${day}}">${day}${suffix}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Month: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setmonth --?{Month?|${months}}">${month}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Year: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --setyear --?{Year?|${year}}">${year}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --settime --hour --?{Hour?|${hour}} --minute --?{Minute?|${minute}}">${hour}:${minute}</a></td></tr>` + //--
-                                `<tr><td ${mwcal.style.tdReg}>Moon: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!mwcal --moon --phase --?{Phase?|${mwcal.moons.join('|')}}">${moon}</a></td></tr>` + //--
-                                `</table>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --advance --?{Amount?|1} --?{Type?|Short Rest|Long Rest|Minute|Hour|Day|Week|Month|Year}">Advance Time</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --weather --toggle">Toggle Weather Display</a></div>` + //--
-                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --moon --toggle">Toggle Moon Display</a></div>` + //--
+                                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --setweather --temp --?{Temperature?|It is a bitterly cold winter day|It is a cold winter day|It is a mild winter day|It is a cold spring day|It is a warm spring day|It is a hot spring day|It is a cool summer day|It is a hot summer day|It is a blisteringly hot summer day|It is a cold fall day|It is a cool fall day|It is a hot fall day} --wind --?{Wind?|there is no wind|the wind is blowing gently|the wind is blowing strongly} --direction --?{Wind Direction?|None|North|South|East|West} --weatherType --?{Weather?|Clear|Overcast|Rain|Thunderstorm|Snow}">Set Weather</a></div>` + //--
                                 `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal --moon">Randomize Moon Phase</a></div>` + //--
                                 `<br>` + //--
                                 `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm">Open Alarm Menu</a></div>` + //--
@@ -1155,7 +1069,7 @@ function alarmMenu(num) {
                 `<div ${mwcal.style.arrow}></div>` + //--
                 `<div ${mwcal.style.divButton}>No Alarms set</div>` + //--
                 `<br><br>` + //--
-                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message}">Create Alarm</a></div>` + //--
+                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message} --pause --?{Pause on Trigger?|No|Yes} --whisper --?{Whisper to GM?|No|Yes}">Create Alarm</a></div>` + //--
                 `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal">Open Calendar</a></div>` + //--
                 `</div>`
             );
@@ -1175,7 +1089,7 @@ function alarmMenu(num) {
                 `<tr><td ${mwcal.style.tdReg}>Alarm: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --?{Alarm?|${alarmList}}">Not selected</a></td></tr>` + //--
                 `</table>` + //--
                 `<br><br>` + //--
-                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message}">Create Alarm</a></div>` + //--
+                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message} --pause --?{Pause on Trigger?|No|Yes} --whisper --?{Whisper to GM?|No|Yes}">Create Alarm</a></div>` + //--
                 `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal">Open Calendar</a></div>` + //--
                 `</div>`
             );
@@ -1191,7 +1105,7 @@ function alarmMenu(num) {
                     `<div ${mwcal.style.arrow}></div>` + //--
                     `<div ${mwcal.style.divButton}>No Alarms set</div>` + //--
                     `<br><br>` + //--
-                    `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message}">Create Alarm</a></div>` + //--
+                    `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message} --pause --?{Pause on Trigger?|No|Yes} --whisper --?{Whisper to GM?|No|Yes}">Create Alarm</a></div>` + //--
                     `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal">Open Calendar</a></div>` + //--
                     `</div>`
                 );
@@ -1210,7 +1124,7 @@ function alarmMenu(num) {
                     `<tr><td ${mwcal.style.tdReg}>Alarm: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --?{Alarm?|${alarmList}}">Not selected</a></td></tr>` + //--
                     `</table>` + //--
                     `<br><br>` + //--
-                    `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message}">Create Alarm</a></div>` + //--
+                    `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message} --pause --?{Pause on Trigger?|No|Yes} --whisper --?{Whisper to GM?|No|Yes}">Create Alarm</a></div>` + //--
                     `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal">Open Calendar</a></div>` + //--
                     `</div>`
                 );
@@ -1240,11 +1154,11 @@ function alarmMenu(num) {
                 `<tr><td ${mwcal.style.tdReg}>Date: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --setdate --?{Date|${date}}">${date}</a></td></tr>` + //--
                 `<tr><td ${mwcal.style.tdReg}>Time: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --settime --?{Time|${time}}">${time}</a></td></tr>` + //--
                 `<tr><td ${mwcal.style.tdReg}>Message: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --setmessage --?{Message?|${message}}">${message}</a></td></tr>` + //--
-                `<tr><td ${mwcal.style.tdReg}>Pause on Trigger: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --setpause --?{Pause on trigger?|Yes|No}">${pause}</a></td></tr>` + //--
+                `<tr><td ${mwcal.style.tdReg}>Pause on Trigger: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --setpause --?{Pause on Trigger?|Yes|No}">${pause}</a></td></tr>` + //--
                 `<tr><td ${mwcal.style.tdReg}>Whisper to GM: </td><td ${mwcal.style.tdReg}><a ${mwcal.style.buttonMedium}" href="!alarm --${num} --setwhisper --?{Whisper to GM?|Yes|No}">${whisper}</a></td></tr>` + //--
                 `</table>` + //--
                 `<br><br>` + //--
-                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message}">Create Alarm</a></div>` + //--
+                `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --new --title --?{Title?|Insert Title} --date --?{Date?|DD.MM.YYYY} --time --?{Time (24h)?|HH:MM} --message --?{Message?|Insert Message} --pause --?{Pause on Trigger?|No|Yes} --whisper --?{Whisper to GM?|No|Yes}">Create Alarm</a></div>` + //--
                 `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!alarm --delete --${num}">Delete Alarm</a></div>` + //--
                 `<div ${mwcal.style.divButton}><a ${mwcal.style.buttonLarge}" href="!mwcal">Open Calendar</a></div>` + //--
                 `</div>`
@@ -1253,7 +1167,7 @@ function alarmMenu(num) {
     }
 }
 
-function createAlarm(title, dateStr, timeStr, message) {
+function createAlarm(title, dateStr, timeStr, message, pause, whisper) {
     const splitDate = dateStr.split('.');
     const day = parseInt(splitDate[0]);
     const month = parseInt(splitDate[1]);
@@ -1283,8 +1197,8 @@ function createAlarm(title, dateStr, timeStr, message) {
         hour: hour,
         minute: minute,
         message: message,
-        pauseOnTrigger: false,
-        whisperToGM: false
+        pauseOnTrigger: (pause === 'Yes'),
+        whisperToGM: (whisper === 'Yes')
     };
 
     state.alarms[mwcal.world].push(alarm);
