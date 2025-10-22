@@ -2,6 +2,7 @@
 A Multi-World Calendar and Weather Generator for Roll20
 
 Originaly made by [Kirsty](https://app.roll20.net/users/1165285/kirsty) and [Julexar](https://github.com/Julexar/)
+
 (Note: Mention of the names of original contributors/maintainers/creators does not imply endorsement by the named individuals/entities)
 
 Contributions UP TO [this commit](https://github.com/BigDashT/Multi-World-Calendar/commit/47782072bb45917237f29fd70875ed5a2177346d) are licensed under [BSD-3](https://github.com/BigDashT/Multi-World-Calendar?tab=BSD-3-Clause-2-ov-file), contributions starting at and following [this commit](https://github.com/BigDashT/Multi-World-Calendar/commit/12049d88dbf8afefa91777ef87fdca6e49716e8e) are licensed under [GNU AGPL 3.0](https://github.com/BigDashT/Multi-World-Calendar/blob/master/LICENSE), please note that distributions or forks may be required to include both licenses!
