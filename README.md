@@ -5,6 +5,8 @@ Originaly made by [Kirsty](https://app.roll20.net/users/1165285/kirsty) and [Jul
 
 (Note: Mention of the names of original contributors/maintainers/creators does not imply endorsement by the named individuals/entities)
 
+I forked this calendar from the original maintainer (Julexar) because it had been last updated well over a year ago and some features were either not working as expected, missing or buggy so I took it upon myself to fix this and add some new functionality that was very useful to me as a DM!
+
 Contributions UP TO [this commit](https://github.com/BigDashT/Multi-World-Calendar/commit/47782072bb45917237f29fd70875ed5a2177346d) are licensed under [BSD-3](https://github.com/BigDashT/Multi-World-Calendar?tab=BSD-3-Clause-2-ov-file), contributions starting at and following [this commit](https://github.com/BigDashT/Multi-World-Calendar/commit/12049d88dbf8afefa91777ef87fdca6e49716e8e) are licensed under [GNU AGPL 3.0](https://github.com/BigDashT/Multi-World-Calendar/blob/master/LICENSE), please note that distributions or forks may be required to include both licenses!
 
 For a Guide, please see [here](https://github.com/Julexar/Multi-World-Calendar/wiki/How-to-use)
